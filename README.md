@@ -34,7 +34,9 @@ Reinicia Claude Code y las skills aparecerán como slash commands.
 
    # Procedimiento...
    ```
-3. `git add . && git commit -m "skill: añadir <nombre>" && git push`.
+3. `git add . && git commit -m "feat: skill <nombre>" && git push`.
+
+> **Nota YAML:** entrecomilla siempre la `description` (con `"..."` o `'...'`). Si contiene `:` seguido de espacio, comillas internas, o `~` al inicio, sin comillas el frontmatter no parsea en GitHub.
 4. En cada máquina: `git pull` desde `~/.claude/skills/` y reiniciar Claude Code.
 
 ## Filosofía

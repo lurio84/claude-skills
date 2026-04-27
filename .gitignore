@@ -1,0 +1,16 @@
+# Locales / temporales
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Posibles secretos (por si acaso)
+.env
+.env.*
+*.key
+*secret*
+*token*
+
+# Borradores
+draft-*/
+WIP-*/

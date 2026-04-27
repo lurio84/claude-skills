@@ -1,6 +1,6 @@
 ---
 name: setup-modelo-barato
-description: Configura Claude Code paso a paso para usar DeepSeek (API muy barata, ~5x menos que Sonnet) o un modelo local con Ollama (gratis, privado). Usar cuando alguien quiere reducir costes de Claude Code, probar modelos locales, o no tiene cuenta de Anthropic. Pensado para usuarios no tecnicos: pregunta una cosa a la vez, verifica cada paso antes de avanzar.
+description: "Configura Claude Code paso a paso para usar DeepSeek (API muy barata, ~5x menos que Sonnet) o un modelo local con Ollama (gratis, privado). Usar cuando alguien quiere reducir costes de Claude Code, probar modelos locales, o no tiene cuenta de Anthropic. Pensado para usuarios no tecnicos — pregunta una cosa a la vez, verifica cada paso antes de avanzar."
 ---
 
 # Setup de modelo alternativo en Claude Code

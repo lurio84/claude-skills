@@ -1,5 +1,5 @@
 ---
-name: setup-modelo-barato
+name: setup-deepseek
 description: "Configura Claude Code paso a paso para usar DeepSeek como proveedor alternativo (~5x mas barato que Sonnet). Pensado para usuarios no tecnicos — pregunta una cosa a la vez, verifica cada paso antes de avanzar. No requiere hardware especial, solo una API key de DeepSeek."
 ---
 
@@ -53,6 +53,8 @@ set ANTHROPIC_AUTH_TOKEN=LA_API_KEY_QUE_TE_DIO
 set ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-v4-flash
 set ANTHROPIC_DEFAULT_SONNET_MODEL=%MODEL%
 set ANTHROPIC_DEFAULT_OPUS_MODEL=%MODEL%
+set CLAUDE_CODE_MAX_CONTEXT_TOKENS=1000000
+set DISABLE_COMPACT=1
 
 claude --model %MODEL%
 ```

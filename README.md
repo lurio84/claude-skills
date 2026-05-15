@@ -7,7 +7,8 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 | Skill | Para qué sirve |
 |---|---|
 | [`revisar-cryptotrader`](./revisar-cryptotrader/SKILL.md) | Revisión semanal del proyecto CryptoTrader: estado de runs, alertas disparadas, diagnóstico y fix de fallos. |
-| [`setup-modelo-barato`](./setup-modelo-barato/SKILL.md) | Guía paso a paso para configurar Claude Code con DeepSeek o Ollama local. Pensada para usuarios no técnicos. |
+| [`setup-deepseek`](./setup-deepseek/SKILL.md) | Guía paso a paso para configurar Claude Code con DeepSeek (~5x más barato). Pensada para usuarios no técnicos. |
+| [`statusline-setup`](./statusline-setup/SKILL.md) | Configura interactivamente el status line de Claude Code: campos, barras de progreso y ancho. Incluye `statusline.py` listo para usar. |
 
 ## Cómo usarlo en otra máquina
 

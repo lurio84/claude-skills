@@ -1,6 +1,6 @@
 ---
 name: setup-deepseek
-description: "Configura Claude Code paso a paso para usar DeepSeek como proveedor alternativo (~5x mas barato que Sonnet). Pensado para usuarios no tecnicos — pregunta una cosa a la vez, verifica cada paso antes de avanzar. No requiere hardware especial, solo una API key de DeepSeek."
+description: "Configures Claude Code step by step to use DeepSeek as an alternative provider (~5x cheaper than Sonnet). Designed for non-technical users — asks one thing at a time, verifies each step before moving on. No special hardware required, just a DeepSeek API key."
 ---
 
 # Configurar Claude Code con DeepSeek

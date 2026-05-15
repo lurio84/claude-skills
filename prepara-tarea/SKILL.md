@@ -1,6 +1,6 @@
 ---
 name: prepara-tarea
-description: Checklist obligatorio ANTES de empezar tareas no triviales — define scope, criterios de éxito, delegación y verificación E2E. Incluye modo investigación con citas obligatorias. Activar con "/prepara", "preparar tarea", "antes de empezar X" o cuando la tarea sea compleja/ambigua. Saltar en tareas triviales (1-2 pasos obvios).
+description: Mandatory checklist BEFORE starting non-trivial tasks — defines scope, success criteria, delegation and E2E verification. Includes research mode with required citations. Trigger with "/prepara", "preparar tarea", "antes de empezar X", or when the task is complex/ambiguous. Skip for trivial tasks (1-2 obvious steps).
 disable-model-invocation: false
 ---
 

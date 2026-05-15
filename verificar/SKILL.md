@@ -1,6 +1,6 @@
 ---
 name: verificar
-description: Antes de declarar cualquier tarea como completada, ejecuta el comando de verificación real, muestra el output y confirma que el resultado es correcto. Usar al terminar features, bugs, refactors, notas de vault, configs, scripts, o cualquier cambio. También cuando el usuario pregunte "¿funciona?" o "¿está bien?".
+description: Before declaring any task complete, runs the real verification command, shows the output and confirms the result is correct. Use when finishing features, bugs, refactors, vault notes, configs, scripts, or any change. Also when the user asks "¿funciona?" or "¿está bien?".
 disable-model-invocation: false
 ---
 

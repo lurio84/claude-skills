@@ -1,6 +1,6 @@
 ---
 name: statusline-setup
-description: "Configura interactivamente el status line de Claude Code (~/.claude/statusline.py). Pregunta qué campos mostrar, si quiere barras de progreso y el ancho, genera el script y verifica que funciona. Usar cuando el usuario diga 'configurar status line', 'cambiar status line', 'setup statusline' o similar."
+description: "Interactively configures the Claude Code status line (~/.claude/statusline.py). Asks which fields to show, whether to include progress bars and their width, generates the script and verifies it works. Use when the user says 'configurar status line', 'cambiar status line', 'setup statusline' or similar."
 ---
 
 # statusline-setup

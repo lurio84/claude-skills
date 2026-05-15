@@ -1,6 +1,6 @@
 ---
 name: revisar-cryptotrader
-description: 'Revisión semanal del proyecto CryptoTrader (lurio84/CryptoTrader). Comprueba estado de los GitHub Actions runs, detecta alertas de compra/venta disparadas, y diagnostica/propone fix si algún run falló. Usar cuando el usuario diga "revisar cryptotrader", "cómo va cryptotrader", "ha saltado alguna alerta" o similar.'
+description: 'Weekly review of the CryptoTrader project (lurio84/CryptoTrader). Checks GitHub Actions run status, detects triggered buy/sell alerts, and diagnoses/proposes fixes for failed runs. Use when the user says "revisar cryptotrader", "cómo va cryptotrader", "ha saltado alguna alerta" or similar.'
 ---
 
 # Revisar CryptoTrader

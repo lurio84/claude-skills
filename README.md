@@ -6,9 +6,12 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 
 | Skill | Para qué sirve |
 |---|---|
+| [`handoff`](./handoff/SKILL.md) | Genera un documento de traspaso estructurado para que un agente nuevo retome la conversación. |
+| [`prepara-tarea`](./prepara-tarea/SKILL.md) | Checklist pre-tarea: scope, criterios de éxito, delegación y verificación E2E. Incluye modo investigación con citas obligatorias. |
 | [`revisar-cryptotrader`](./revisar-cryptotrader/SKILL.md) | Revisión semanal del proyecto CryptoTrader: estado de runs, alertas disparadas, diagnóstico y fix de fallos. |
 | [`setup-deepseek`](./setup-deepseek/SKILL.md) | Guía paso a paso para configurar Claude Code con DeepSeek (~5x más barato). Pensada para usuarios no técnicos. |
 | [`statusline-setup`](./statusline-setup/SKILL.md) | Configura interactivamente el status line de Claude Code: campos, barras de progreso y ancho. Incluye `statusline.py` listo para usar. |
+| [`verificar`](./verificar/SKILL.md) | Verificación obligatoria al cerrar cualquier tarea: ejecuta el comando real, muestra output y confirma resultado correcto. |
 
 ## Cómo usarlo en otra máquina
 

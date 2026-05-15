@@ -12,12 +12,13 @@ SEP  = f' {RST}│{W} '
 
 def bar(pct, width=8):
     filled = round(pct / 100 * width)
-    return '█' * filled + '░' * (width - filled)
+    return '▬' * filled + '─' * (width - filled)
 
 def fmt_pct(pct):
-    if pct >= 90: return f'{CRIT}{pct}%{RST}{W}'
-    if pct >= 75: return f'{WARN}{pct}%{RST}{W}'
-    return f'{pct}%'
+    p = round(pct)
+    if p >= 90: return f'{CRIT}{p}%{RST}{W}'
+    if p >= 75: return f'{WARN}{p}%{RST}{W}'
+    return f'{p}%'
 
 # Model
 model = d.get('model', {}).get('display_name', '')
@@ -37,12 +38,12 @@ if cost is not None:
 # Rate limit 5h
 r5 = d.get('rate_limits', {}).get('five_hour', {}).get('used_percentage')
 if r5 is not None:
-    parts.append(f'5h {bar(r5, 6)} {fmt_pct(r5)}')
+    parts.append(f'5h {bar(r5, 8)} {fmt_pct(r5)}')
 
 # Rate limit 7d
 r7 = d.get('rate_limits', {}).get('seven_day', {}).get('used_percentage')
 if r7 is not None:
-    parts.append(f'7d {bar(r7, 6)} {fmt_pct(r7)}')
+    parts.append(f'7d {bar(r7, 8)} {fmt_pct(r7)}')
 
 # Effort
 effort = d.get('effort', {}).get('level', '')

@@ -109,6 +109,37 @@ Imprimir un solo párrafo:
 
 6. **NO archivar huérfanas reales**. A 120 notas y todo reciente, no hay deuda. Solo proponer enlaces; nunca borrar/mover.
 
+7. **BFS de componentes conexas** (cierre topológico). Ejecutar al final de la fase, después de aplicar fixes de los puntos 1-5, para distinguir nubes visuales de Obsidian (densidad) de desconexión real (componentes). Script PowerShell:
+
+   ```powershell
+   $root = "C:\Users\lucas\SecondBrain"
+   $notes = Get-ChildItem -Path $root -Recurse -Filter *.md -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\\.obsidian\\' -and $_.FullName -notmatch '\\Colab Notebooks\\' }
+   $nameToFile = @{}
+   foreach ($n in $notes) { $bn = [System.IO.Path]::GetFileNameWithoutExtension($n.Name); if (-not $nameToFile.ContainsKey($bn)) { $nameToFile[$bn] = $n.FullName } }
+   $adj = @{}
+   foreach ($bn in $nameToFile.Keys) { $adj[$bn] = New-Object System.Collections.Generic.HashSet[string] }
+   foreach ($n in $notes) {
+     $bn = [System.IO.Path]::GetFileNameWithoutExtension($n.Name)
+     $content = Get-Content $n.FullName -Raw -ErrorAction SilentlyContinue
+     if (-not $content) { continue }
+     $regexMatches = [regex]::Matches($content, '\[\[([^\]\|#]+)')
+     foreach ($m in $regexMatches) {
+       $target = ($m.Groups[1].Value -split '\|')[0].Trim()
+       if ($nameToFile.ContainsKey($target) -and $target -ne $bn) { [void]$adj[$bn].Add($target); [void]$adj[$target].Add($bn) }
+     }
+   }
+   $visited = @{}; $components = New-Object System.Collections.ArrayList
+   foreach ($bn in ($nameToFile.Keys | Sort-Object)) {
+     if ($visited.ContainsKey($bn)) { continue }
+     $comp = New-Object System.Collections.ArrayList; $queue = New-Object System.Collections.Queue
+     $queue.Enqueue($bn); $visited[$bn] = $true
+     while ($queue.Count -gt 0) { $cur = $queue.Dequeue(); [void]$comp.Add($cur); foreach ($next in $adj[$cur]) { if (-not $visited.ContainsKey($next)) { $visited[$next] = $true; $queue.Enqueue($next) } } }
+     [void]$components.Add($comp)
+   }
+   ```
+
+   Para cada componente con ≥2 nodos que NO sea la grande: clasificar **isla legítima** (evento puntual, config, checkpoint) vs **isla a conectar** (cluster que va a crecer). Para la grande: identificar nodos cuyo único puente al resto es `Revision-Vault.md` u otra nota meta — esos puentes son **accidentales** (desaparecen cuando la meta-nota se reescribe). Proponer enlace desde un hub de contenido real. Lección detectada 2026-05-16: `Recetas-Familia` parecía conectada pero su único puente era esa cita meta.
+
 ### Fase 5 — Auto-aplicar trivial (lo seguro, lo demás se propone)
 
 Aplicar automáticamente, listando en la nota viva qué se aplicó:

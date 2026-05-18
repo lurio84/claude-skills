@@ -11,6 +11,7 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 | [`revisar-cryptotrader`](./revisar-cryptotrader/SKILL.md) | Revisión semanal del proyecto CryptoTrader: estado de runs, alertas disparadas, diagnóstico y fix de fallos. |
 | [`setup-deepseek`](./setup-deepseek/SKILL.md) | Guía paso a paso para configurar Claude Code con DeepSeek (~5x más barato). Pensada para usuarios no técnicos. |
 | [`statusline-setup`](./statusline-setup/SKILL.md) | Configura interactivamente el status line de Claude Code: campos, barras de progreso y ancho. Incluye `statusline.py` listo para usar. |
+| [`revisar-vault`](./revisar-vault/SKILL.md) | Revisión periódica del vault Obsidian: cierra hilos abiertos de auditorías previas, procesa Inbox. Output en `Yo/Revision-Vault.md` (nota viva, no nueva por fecha). |
 | [`verificar`](./verificar/SKILL.md) | Verificación obligatoria al cerrar cualquier tarea: ejecuta el comando real, muestra output y confirma resultado correcto. |
 
 ## Cómo usarlo en otra máquina

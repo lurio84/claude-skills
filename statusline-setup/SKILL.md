@@ -35,11 +35,20 @@ Pregunta al usuario qué campos quiere mostrar usando AskUserQuestion con `multi
 
 ### Paso 3 — Preguntar estilo de barras
 
-Para campos de porcentaje (ctx, 5h, 7d), pregunta:
-- **Con barras** — `ctx ▬▬▬▬──── 26%`
-- **Solo número** — `ctx 26%`
+Para campos de porcentaje (ctx, 5h, 7d), pregunta primero si quiere barras o solo número:
+- **Con barras** — muestra barra gráfica + porcentaje
+- **Solo número** — solo el porcentaje (sin barra)
 
-Si elige barras, pregunta el ancho:
+Si elige barras, pregunta el **estilo visual** con previews (AskUserQuestion single-select):
+
+| Opción | Preview |
+|---|---|
+| Carril (recomendado) | `▬▬▬▬────  42%` |
+| Bloque | `████░░░░  42%` |
+| Cuadrado | `■■■■□□□□  42%` |
+| Corchetes | `[====    ]  42%` |
+
+Luego pregunta el **ancho**:
 - **Compacto** (6) — `▬▬──────`
 - **Estándar** (8) — `▬▬▬▬────` *(recomendado)*
 - **Amplio** (10) — `▬▬▬▬▬▬────`
@@ -63,9 +72,15 @@ WARN = '\033[33m'   # yellow >=75%
 CRIT = '\033[31m'   # red    >=90%
 SEP  = f' {RST}│{W} '
 
-def bar(pct, width=8):
-    filled = round(pct / 100 * width)
-    return '▬' * filled + '─' * (width - filled)
+BAR_FILLED = '▬'        # elegido por el usuario: '▬', '█', '■', '='
+BAR_EMPTY  = '─'        # elegido por el usuario: '─', '░', '□', ' '
+BAR_WIDTH  = 8          # elegido por el usuario: 6, 8, 10
+BAR_WRAP   = ('', '')   # ('', '') por defecto; ('[', ']') para estilo corchetes
+
+def bar(pct):
+    filled = round(pct / 100 * BAR_WIDTH)
+    b = BAR_FILLED * filled + BAR_EMPTY * (BAR_WIDTH - filled)
+    return BAR_WRAP[0] + b + BAR_WRAP[1]
 
 def fmt_pct(pct):
     p = round(pct)

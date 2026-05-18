@@ -89,7 +89,45 @@ def fmt_pct(pct):
     return f'{p}%'
 ```
 
-Añade solo los bloques de campos que el usuario eligió. Termina siempre con:
+Añade solo los bloques de campos que el usuario eligió, usando exactamente estos snippets:
+
+```python
+# Modelo
+model = d.get('model', {}).get('display_name', '')
+if model:
+    parts.append(model.replace('Claude ', '').replace(' Latest', ''))
+
+# Contexto
+pct = d.get('context_window', {}).get('used_percentage')
+if pct is not None:
+    parts.append(f'ctx {bar(pct)} {fmt_pct(pct)}')
+
+# Coste
+cost = d.get('cost', {}).get('total_cost_usd')
+if cost is not None:
+    parts.append(f'${cost:.3f}')
+
+# Rate limit 5h
+r5 = d.get('rate_limits', {}).get('five_hour', {}).get('used_percentage')
+if r5 is not None:
+    parts.append(f'5h {bar(r5)} {fmt_pct(r5)}')
+
+# Rate limit 7d
+r7 = d.get('rate_limits', {}).get('seven_day', {}).get('used_percentage')
+if r7 is not None:
+    parts.append(f'7d {bar(r7)} {fmt_pct(r7)}')
+
+# Effort
+effort = d.get('effort', {}).get('level', '')
+if effort:
+    parts.append(f'effort {effort}')
+
+# Thinking (solo si el usuario lo eligió)
+if d.get('thinking', {}).get('enabled'):
+    parts.append(f'{WARN}think:on{RST}{W}')
+```
+
+Termina siempre con:
 ```python
 print(f'{W}' + SEP.join(parts) + RST)
 ```

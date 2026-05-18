@@ -13,6 +13,7 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 | [`statusline-setup`](./statusline-setup/SKILL.md) | Configura interactivamente el status line de Claude Code: campos, barras de progreso y ancho. Incluye `statusline.py` listo para usar. |
 | [`revisar-vault`](./revisar-vault/SKILL.md) | Revisión periódica del vault Obsidian: cierra hilos abiertos de auditorías previas, procesa Inbox. Output en `Yo/Revision-Vault.md` (nota viva, no nueva por fecha). |
 | [`verificar`](./verificar/SKILL.md) | Verificación obligatoria al cerrar cualquier tarea: ejecuta el comando real, muestra output y confirma resultado correcto. |
+| [`grill-me`](./grill-me/SKILL.md) | Modo entrevista intensiva sobre un plan o diseño: pregunta una a una recorriendo el árbol de decisiones, con recomendación incluida. |
 
 ## Cómo usarlo en otra máquina
 

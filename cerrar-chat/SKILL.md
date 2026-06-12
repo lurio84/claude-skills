@@ -43,8 +43,17 @@ Si no hay notas tocadas, o no hay nada que arreglar, dilo en una línea y sigue.
 ### 5. Prompt de continuación (CONDICIONAL)
 Ofrécelo **solo** si quedó trabajo a medias no trivial — estado mental complejo (debugging a medias, decisión en curso, hilo de razonamiento largo) que se perdería en un chat limpio. Si todo está cerrado y ya en memoria/vault, **no** ofrezcas prompt: es ruido.
 
+### 6. Commit + push (sync manual)
+Como paso final, persistir a remoto ejecutando el script de sync (ya no hay hook automático que lo haga):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/skills/sync/sync.ps1
+```
+
+Mostrar el resultado por repo. Si algún repo reporta `PUSH FAILED` o `sin pushear`, avisar a Lucas (probablemente `gh` no logueado como `lurio84`). No cerrar declarando éxito si algún repo no llegó a `pushed` / `up to date`.
+
 ## Límites duros (lo que este skill NO hace)
 - **NO** invocar `/handoff` automáticamente. Es caro y solo merece la pena con estado mental complejo; esa decisión es de Lucas, no del skill. Como mucho, sugiérelo en una línea si el paso 5 detecta ese caso.
 - **NO** encadenar `/revisar-vault`. Esa es la revisión periódica pesada del vault completo, otro ámbito.
 - **NO** mover, renombrar, archivar ni fusionar notas. **NO** crear wikilinks a notas que no existen.
-- **NO** hacer commit ni push. El sync del vault es automático vía hook (`feedback_workflow_secondbrain`).
+- El commit + push del paso 6 es el ÚNICO que hace este skill. NO inventes otros commits ni toques repos fuera de los 3 del setup (`feedback_workflow_secondbrain`).

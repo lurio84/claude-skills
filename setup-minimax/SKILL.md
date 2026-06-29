@@ -63,15 +63,55 @@ Explicale:
 
 > He creado un archivo en tu Escritorio llamado `claude-minimax.bat`. Para usar Claude Code con MiniMax, simplemente haz doble clic en ese archivo. La interfaz es la misma de siempre pero usando MiniMax por debajo.
 
-### Paso 4 — Test rapido
+### Paso 4 — Activar busqueda web (MCP de MiniMax)
+
+MiniMax incluye un servidor de busqueda web que hay que instalar por separado. Necesita `uvx` (una herramienta de Python). Primero comprueba si ya esta:
+
+Ejecuta `uvx --version`. Si funciona, continua. Si falla:
+
+> Necesitas instalar `uv` para activar la busqueda web. Abre una terminal (busca "cmd" en el menu de inicio) y pega este comando:
+>
+> `winget install astral-sh.uv`
+>
+> Cuando termine, cierra la terminal y dime cuando este listo.
+
+Una vez confirmado que `uvx` funciona, crea o actualiza el archivo `%USERPROFILE%\.mcp.json`:
+
+- Si el archivo no existe, crealo con este contenido (sustituyendo la key):
+  ```json
+  {
+    "mcpServers": {
+      "minimax": {
+        "type": "stdio",
+        "command": "uvx",
+        "args": ["minimax-coding-plan-mcp", "-y"],
+        "env": {
+          "MINIMAX_API_KEY": "LA_API_KEY_QUE_TE_DIO",
+          "MINIMAX_API_HOST": "https://api.minimax.io"
+        }
+      }
+    }
+  }
+  ```
+- Si el archivo ya existe, añade el bloque `"minimax": { ... }` dentro de `"mcpServers"` sin borrar lo que haya.
+
+Lee el archivo resultante y confirma que tiene el bloque `minimax` con la key correcta antes de continuar.
+
+### Paso 5 — Test rapido
 
 Pidele que haga doble clic en el `.bat` y dentro de Claude Code escriba:
 
 > di hola y dime que modelo eres
 
-Si responde mencionando MiniMax o M3, listo. Si da error de autenticacion, volver al Paso 2 y comprobar que la key se copio bien (sin espacios al principio ni al final).
+Si responde mencionando MiniMax o M3, el modelo funciona. Si da error de autenticacion, volver al Paso 2 y comprobar que la key se copio bien (sin espacios al principio ni al final).
 
-> Listo! Cuando quieras usar Claude Code con MiniMax, haz doble clic en `claude-minimax.bat` del Escritorio. Para usar el Claude normal, abrelo como siempre.
+Luego pide que escriba:
+
+> busca en internet que tiempo hace hoy en Madrid
+
+Si responde con el tiempo actual, la busqueda web funciona. Si no aparece la herramienta de busqueda, el MCP no cargo: pide que cierre y vuelva a abrir el `.bat`.
+
+> Listo! Tienes Claude Code con MiniMax-M3 (1 millon de tokens de contexto) y busqueda web integrada. Para lanzarlo, doble clic en `claude-minimax.bat` del Escritorio.
 
 ## Reglas generales
 

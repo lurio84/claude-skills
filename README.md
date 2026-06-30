@@ -14,6 +14,9 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 | [`revisar-vault`](./revisar-vault/SKILL.md) | Revisión periódica del vault Obsidian: cierra hilos abiertos de auditorías previas, procesa Inbox. Output en `Yo/Revision-Vault.md` (nota viva, no nueva por fecha). |
 | [`verificar`](./verificar/SKILL.md) | Verificación obligatoria al cerrar cualquier tarea: ejecuta el comando real, muestra output y confirma resultado correcto. |
 | [`grill-me`](./grill-me/SKILL.md) | Modo entrevista intensiva sobre un plan o diseño: pregunta una a una recorriendo el árbol de decisiones, con recomendación incluida. |
+| [`cerrar-chat`](./cerrar-chat/SKILL.md) | Ritual de cierre de sesión: revisa lo hecho, guarda en vault lo que merece guardarse, actualiza memoria, ofrece prompt de continuación si aplica. |
+| [`sync`](./sync/SKILL.md) | Commit + push manual de los 3 setup repos (claude-config, claude-skills, SecondBrain). Reemplaza el antiguo SessionEnd auto-commit. |
+| [`setup-minimax`](./setup-minimax/SKILL.md) | Configura Claude Code paso a paso para usar MiniMax como proveedor alternativo (con búsqueda web + multimodal). |
 
 ## Cómo usarlo en otra máquina
 

@@ -39,25 +39,47 @@ Cuando te la den, **avisa**:
 
 > Ojo: esa clave es como una contraseña. No la compartas con nadie. La vamos a guardar en un archivo de tu ordenador y solo la usaras tu.
 
+### Paso 2.5 — Elegir modelos por tier
+
+Antes de generar el archivo, una pregunta sobre los modelos. Tienes dos opciones:
+
+> **Opcion A — "Uno solo para todo"** (la mas facil): uso el mismo modelo para Haiku, Sonnet y Opus. Es lo que hace la mayoria y funciona con cualquier modelo de MiniMax. Si eliges esta, dime **"uno solo"** y dime tambien que modelo (por defecto te propongo `MiniMax-M3[1m]`, que es el mas capaz con contexto de 1 millon).
+>
+> **Opcion B — Tres modelos distintos** (recomendado si quieres optimizar precio/velocidad): te propongo esta distribucion que ya usa mi hermano Lucas:
+> - Para **Haiku** (tareas rapidas y baratas): `MiniMax-M2.5-highspeed`
+> - Para **Sonnet** (tareas medianas, equilibrio): `MiniMax-M2.7`
+> - Para **Opus** (lo mas potente): `MiniMax-M3[1m]`
+>
+> Si quieres cambiar alguno, dime cuales quieres usar exactamente (respetando mayusculas y el formato `MiniMax-X.Y`). Si te da igual y quieres los que te propongo, dime **"los que me propones"** y los uso.
+
 ### Paso 3 — Crear el archivo lanzador
 
-Crea el archivo `claude-minimax.bat` en el Escritorio del usuario (`%USERPROFILE%\Desktop\claude-minimax.bat`) con este contenido (sustituyendo `LA_API_KEY_QUE_TE_DIO` por la key que te paso):
+Crea el archivo `claude-minimax.bat` en el Escritorio del usuario (`%USERPROFILE%\Desktop\claude-minimax.bat`) con este contenido (sustituyendo `LA_API_KEY_QUE_TE_DIO` por la key que te paso, y los `MODELO_*` por los que decidio en el Paso 2.5):
 
 ```batch
 @echo off
 set ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
 set ANTHROPIC_AUTH_TOKEN=LA_API_KEY_QUE_TE_DIO
-set ANTHROPIC_DEFAULT_HAIKU_MODEL=MiniMax-M3[1m]
-set ANTHROPIC_DEFAULT_SONNET_MODEL=MiniMax-M3[1m]
-set ANTHROPIC_DEFAULT_OPUS_MODEL=MiniMax-M3[1m]
-set ANTHROPIC_MODEL=MiniMax-M3[1m]
+set ANTHROPIC_DEFAULT_HAIKU_MODEL=MODELO_HAIKU_AQUI
+set ANTHROPIC_DEFAULT_SONNET_MODEL=MODELO_SONNET_AQUI
+set ANTHROPIC_DEFAULT_OPUS_MODEL=MODELO_OPUS_AQUI
+set ANTHROPIC_MODEL=MODELO_PRINCIPAL_AQUI
 set CLAUDE_CODE_AUTO_COMPACT_WINDOW=1000000
+set API_TIMEOUT_MS=3000000
 
-echo Claude Code con MiniMax-M3
+echo Claude Code con MiniMax (tier mapping configurado)
 echo.
 
-claude --model MiniMax-M3[1m]
+claude --model MODELO_PRINCIPAL_AQUI
 ```
+
+**Logica de sustitucion** (segun lo que respondio en el Paso 2.5):
+- Si respondio "uno solo" con modelo `X` → los 4 valores = `X`
+- Si respondio "uno solo" sin modelo → los 4 valores = `MiniMax-M3[1m]`
+- Si dijo "los que me propones" → HAIKU=`MiniMax-M2.5-highspeed`, SONNET=`MiniMax-M2.7`, OPUS=`MiniMax-M3[1m]`, PRINCIPAL=`MiniMax-M3[1m]`
+- Si dio 3 IDs custom → cada uno en su sitio, PRINCIPAL = el que dijo para Opus
+
+> **Nota importante**: si pides `MiniMax-M3` sin el `[1m]`, el contexto baja a 200k en vez de 1 millon. El `[1m]` solo existe para M3 (los M2.x son siempre 204k). Los nombres son **case-sensitive**: respetalos exactos como te los doy (mayusculas en `MiniMax-`, no `minimax-`).
 
 Explicale:
 

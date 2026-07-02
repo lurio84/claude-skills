@@ -119,6 +119,38 @@ Una vez confirmado que `uvx` funciona, crea o actualiza el archivo `%USERPROFILE
 
 Lee el archivo resultante y confirma que tiene el bloque `minimax` con la key correcta antes de continuar.
 
+#### Paso 4b (OPCIONAL, solo si lo pides) — MCP de búsqueda con browse
+
+> Si quieres que pueda **visitar páginas web y extraer su contenido automáticamente** (útil para investigar temas leyendo webs), hay un segundo MCP oficial hermano: `minimax_search`. NO es obligatorio — el primero ya cubre búsquedas web normales.
+>
+> **OJO: este setup es más complicado.** Necesitas 3 claves:
+> 1. `MINIMAX_API_KEY` — la misma que ya tienes (MiniMax)
+> 2. `SERPER_API_KEY` — de https://serper.dev (Google Search API, gratis hasta 2.500 búsquedas/mes). Te creas cuenta, vas al dashboard y copias la key.
+> 3. `JINA_API_KEY` — de https://jina.ai (lector de contenido web, tier gratis limitado). Te creas cuenta y copias la key del dashboard.
+>
+> Si me las pasas, las añado. Si no, sáltate este paso — no pasa nada, lo otro ya funciona para búsquedas normales.
+
+Si el usuario acepta y da las 3 keys, añade este segundo bloque en `mcpServers` (no reemplaza el primero):
+
+```json
+"minimax_search": {
+  "type": "stdio",
+  "command": "uvx",
+  "args": [
+    "--from",
+    "git+https://github.com/MiniMax-AI/minimax_search.git",
+    "minimax-search"
+  ],
+  "env": {
+    "MINIMAX_API_KEY": "LA_MISMA_KEY_DE_ANTES",
+    "SERPER_API_KEY": "LA_KEY_DE_SERPER",
+    "JINA_API_KEY": "LA_KEY_DE_JINA"
+  }
+}
+```
+
+> Nota: el comando usa `git+https://...` en vez del `git+ssh://...` oficial porque en Windows normalmente no hay clave SSH de GitHub configurada. La versión HTTPS funciona igual.
+
 ### Paso 5 — Test rapido
 
 Pidele que haga doble clic en el `.bat` y dentro de Claude Code escriba:

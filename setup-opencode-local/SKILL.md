@@ -49,6 +49,8 @@ Con el resultado (memoria **libre**, no total — el escritorio de Windows ya us
 | **< 4 GB** | Avisa que la experiencia va a ser muy limitada; ofrece el 3B igualmente si el usuario quiere probar | Bajo este umbral el margen para el sistema operativo es demasiado justo |
 
 > **Nota para ti**: estos tamaños vienen de datos publicos de terceros (ficha del modelo en Hugging Face / benchmarks de comunidad), **no** de una medicion propia de Lucas como el resto de la nota RTX5070 — es una extrapolacion razonable, no un hecho contrastado en esta GPU en concreto. Si algo no encaja (OOM, muy lento), es la señal para bajar de tier (7B→3B, o subir la cuantizacion a Q3_K_M).
+>
+> **Importante — a diferencia de los modelos de la nota RTX5070 (Gemma/Qwen3.6, todos MoE con sliding-window o atencion lineal), Qwen2.5-Coder es un modelo DENSO normal**: su cache (KV) crece linealmente con el contexto (`-c`), sin los trucos que hacian barato el contexto largo en la 5070. Por eso el Paso 4 usa contexto conservador (8192) y cuantiza tambien la cache — si no, un 7B a 16k+ contexto puede quedarse sin VRAM.
 
 Dile al usuario que modelo le toca y por que, en una frase.
 
@@ -62,9 +64,9 @@ Dile al usuario que modelo le toca y por que, en una frase.
 
 Verifica pidiendo que ejecute, desde esa carpeta:
 ```
-llama-server.exe --version
+llama-server.exe --help
 ```
-Si da error de DLL faltante, casi siempre falta el zip de `cudart` — revisar que se descomprimio en el mismo sitio.
+Si sale un listado de opciones, el ejecutable funciona. Si da error de DLL faltante, casi siempre falta el zip de `cudart` — revisar que se descomprimio en el mismo sitio.
 
 ### Paso 3 — Descargar el modelo
 
@@ -82,25 +84,27 @@ Segun lo decidido en el Paso 1:
 
 ### Paso 4 — Crear el lanzador del servidor
 
-Crea `C:\llama.cpp\arrancar-modelo.bat` (ajusta `MODELO.gguf` al nombre real descargado, y el contexto: `8192` para el 3B, `16384` para el 7B):
+Crea `C:\llama.cpp\arrancar-modelo.bat` (ajusta `MODELO.gguf` al nombre real descargado). El contexto se queda en **8192 para los dos modelos** (7B y 3B) — es un modelo denso (no como los de la 5070), la cache crece con el contexto, y 8192 es un tamaño seguro para 6-8GB. `--cache-type-k/v q8_0` reduce a la mitad el peso de esa cache:
 
 ```bat
 @echo off
 cd /d C:\llama.cpp
-llama-server.exe -m models\MODELO.gguf --jinja -ngl 99 -fa on -c CONTEXTO --port 8080 --no-webui
+llama-server.exe -m models\MODELO.gguf --jinja -ngl 99 -fa on -c 8192 --cache-type-k q8_0 --cache-type-v q8_0 --port 8080 --no-webui
 ```
 
 > Este archivo es el que arranca el "motor". Haz doble clic en el, y dejalo abierto en segundo plano mientras trabajes — si lo cierras, se apaga el modelo. La primera vez puede tardar 10-20 segundos en cargar.
 
+**Si la ventana se cierra sola o da un error de memoria (OOM / "failed to allocate")**: el modelo no cabe en tu VRAM libre. Soluciones en orden: (1) baja `-c 8192` a `-c 4096`; (2) si estabas en el 7B, cambia al 3B (repite el Paso 3 con el enlace del 3B); (3) cierra programas que usen la GPU (navegador con muchas pestañas, otro juego).
+
 ### Paso 5 — Verificar que el servidor responde de verdad
 
-No basta con que la ventana no de error. Pide que abra OTRA terminal (con el `.bat` de antes ya corriendo) y ejecute:
+No basta con que la ventana no de error. Pide que abra OTRA terminal (con el `.bat` de antes ya corriendo) y ejecute, en PowerShell:
 
 ```powershell
-curl http://127.0.0.1:8080/v1/chat/completions -Method Post -ContentType "application/json" -Body '{"messages":[{"role":"user","content":"di hola"}]}'
+Invoke-RestMethod -Uri "http://127.0.0.1:8080/v1/chat/completions" -Method Post -ContentType "application/json" -Body '{"messages":[{"role":"user","content":"di hola"}]}'
 ```
 
-Si devuelve una respuesta con texto (no un error de conexion), el servidor esta listo. Si da error de conexion, el `.bat` no se arranco bien o aun esta cargando — espera 20s y reintenta.
+Si devuelve una respuesta con texto (no un error de conexion), el servidor esta listo. Si da error de conexion, el `.bat` no se arranco bien o aun esta cargando — espera 20s y reintenta. (Ojo: no uses `curl` a secas para esto — en Windows suele haber un `curl.exe` real que no acepta `-Method`/`-ContentType`, esos son parametros de `Invoke-RestMethod`.)
 
 ### Paso 6 — Instalar opencode
 
@@ -133,7 +137,7 @@ Crea o edita `%USERPROFILE%\.config\opencode\opencode.json` (crea la carpeta si 
         "coder": {
           "name": "Qwen2.5-Coder local",
           "limit": {
-            "context": CONTEXTO,
+            "context": 8192,
             "output": 4096
           }
         }
@@ -143,9 +147,7 @@ Crea o edita `%USERPROFILE%\.config\opencode\opencode.json` (crea la carpeta si 
 }
 ```
 
-(`CONTEXTO` = el mismo numero que pusiste en el `.bat` del Paso 4 — 8192 o 16384.)
-
-### Paso 8 — Probar con una tarea real
+### Paso 8 — Probar con una tarea real (dos pruebas, no una)
 
 > Vamos a probarlo con un caso real. Crea una carpeta de pruebas y entra en ella:
 > ```
@@ -157,7 +159,23 @@ Crea o edita `%USERPROFILE%\.config\opencode\opencode.json` (crea la carpeta si 
 
 Verifica TU (no te fies de lo que diga el agente): pide que ejecute `python hola.py` o que abra el archivo y lea su contenido.
 
-> ✅ Si ves el archivo con el contenido correcto, ya tienes tu agente local funcionando. Para usarlo cualquier dia: doble clic en `arrancar-modelo.bat`, espera a que cargue, y luego `opencode` desde la carpeta de tu proyecto.
+**Prueba 2 — la que de verdad importa (no te la saltes)**: crear un archivo es fácil, la prueba dura es si el modelo **respeta código que ya existe** al editarlo — es el fallo mas comun de los modelos pequeños con opencode (reescriben el archivo entero y se dejan cosas por el camino). Pide que cree `calculadora.py` con este contenido exacto:
+
+```python
+def sumar(a, b):
+    return a + b
+
+def restar(a, b):
+    return a - b
+```
+
+Luego, en opencode: **"añade una función multiplicar(a, b) a calculadora.py, sin tocar las que ya existen"**.
+
+Verifica TU leyendo el archivo final: deben seguir estando `sumar` y `restar` intactas, mas la nueva `multiplicar`. Si desaparece alguna de las dos originales, el modelo esta reescribiendo en vez de preservar — avisa de esto explicitamente:
+
+> Ojo con esto: cuando le pidas cambios sobre codigo que ya existe, revisa siempre que no haya borrado nada por el camino. Es el fallo mas tipico de estos modelos pequeños.
+
+> ✅ Si las dos pruebas salen bien, ya tienes tu agente local funcionando. Para usarlo cualquier dia: doble clic en `arrancar-modelo.bat`, espera a que cargue, y luego `opencode` desde la carpeta de tu proyecto.
 
 ## Avisos importantes que dar al final
 

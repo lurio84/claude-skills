@@ -153,8 +153,10 @@ Crea o edita `%USERPROFILE%\.config\opencode\opencode.json` (crea la carpeta si 
 > ```
 > mkdir %USERPROFILE%\Desktop\prueba-opencode
 > cd %USERPROFILE%\Desktop\prueba-opencode
-> opencode
+> opencode -m local/coder
 > ```
+> **El `-m local/coder` es importante** — sin él, opencode arranca sin saber qué modelo usar (puede pedir configurar una cuenta de pago, o dar error) porque no tiene una API key de ningún proveedor en la nube. `local/coder` le dice "usa el proveedor `local` del `opencode.json` que configuramos, con el modelo `coder`".
+>
 > Dentro de opencode, con el `.bat` del modelo abierto en otra ventana, escribe: **"crea un archivo hola.py que imprima 'funciona'"**
 
 Verifica TU (no te fies de lo que diga el agente): pide que ejecute `python hola.py` o que abra el archivo y lea su contenido.
@@ -175,13 +177,14 @@ Verifica TU leyendo el archivo final: deben seguir estando `sumar` y `restar` in
 
 > Ojo con esto: cuando le pidas cambios sobre codigo que ya existe, revisa siempre que no haya borrado nada por el camino. Es el fallo mas tipico de estos modelos pequeños.
 
-> ✅ Si las dos pruebas salen bien, ya tienes tu agente local funcionando. Para usarlo cualquier dia: doble clic en `arrancar-modelo.bat`, espera a que cargue, y luego `opencode` desde la carpeta de tu proyecto.
+> ✅ Si las dos pruebas salen bien, ya tienes tu agente local funcionando. Para usarlo cualquier dia: doble clic en `arrancar-modelo.bat`, espera a que cargue, y luego `opencode -m local/coder` desde la carpeta de tu proyecto. **Recuerda: si cierras la ventana negra del `.bat`, el modelo se apaga** — tiene que quedarse abierta todo el rato que uses opencode.
 
 ## Avisos importantes que dar al final
 
 - **Esto es un complemento, no un reemplazo.** Para trabajo donde importa el resultado y el tiempo, sigue usando Claude Code de pago. Esto es para privacidad, coste cero, o simplemente para aprender.
 - **La herramienta de editar archivos a veces falla en modelos pequeños** — si opencode dice que edito algo y el resultado no tiene sentido, pidele que reescriba el archivo entero en vez de editarlo.
-- **Trabaja siempre dentro de una carpeta con git** (o con copias de seguridad) para poder deshacer si el agente rompe algo — igual que se recomienda con cualquier agente que edite codigo sin supervision total.
+- **Trabaja siempre dentro de una carpeta con git** (o con copias de seguridad) para poder deshacer si el agente rompe algo — igual que se recomienda con cualquier agente que edite codigo sin supervision total. Comprueba primero con `git --version`; si falla, `winget install Git.Git` (cerrar y abrir la terminal despues).
+- **No cierres la ventana del `.bat` del modelo mientras trabajas** — es el motor, si se apaga opencode deja de responder.
 
 ## Reglas generales
 

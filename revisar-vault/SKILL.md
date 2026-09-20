@@ -120,11 +120,14 @@ Imprimir un solo párrafo:
    foreach ($bn in $nameToFile.Keys) { $adj[$bn] = New-Object System.Collections.Generic.HashSet[string] }
    foreach ($n in $notes) {
      $bn = [System.IO.Path]::GetFileNameWithoutExtension($n.Name)
-     $content = Get-Content $n.FullName -Raw -ErrorAction SilentlyContinue
+     # -Encoding UTF8 es obligatorio: PS 5.1 lee en ANSI por defecto y corrompe
+     # acentos/ñ de los wikilinks -> falsos rotos y falsas islas.
+     $content = Get-Content $n.FullName -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
      if (-not $content) { continue }
      $regexMatches = [regex]::Matches($content, '\[\[([^\]\|#]+)')
      foreach ($m in $regexMatches) {
        $target = ($m.Groups[1].Value -split '\|')[0].Trim()
+       $target = ($target -split '/')[-1]   # enlaces con ruta ([[_archivo/Nota]]) se resuelven por nombre
        if ($nameToFile.ContainsKey($target) -and $target -ne $bn) { [void]$adj[$bn].Add($target); [void]$adj[$target].Add($bn) }
      }
    }

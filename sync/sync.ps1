@@ -20,6 +20,10 @@ $repos = @(
     @{ Name = 'SecondBrain';   Path = Join-Path $env:USERPROFILE 'SecondBrain' }
 )
 
+# Patron de posibles secretos: solo se mira lo AÑADIDO (diff -U0), no el archivo entero,
+# para no disparar con cosas como "sk-close-state" o "sk-management" (vocabulario del vault).
+$secretPattern = 'sk-(cp-)?[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[bp]-[0-9A-Za-z-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY'
+
 $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm')
 $host_ = $env:COMPUTERNAME
 
@@ -39,6 +43,30 @@ foreach ($r in $repos) {
     $status = & git -C $r.Path status --porcelain 2>$null
     if ($status) {
         & git -C $r.Path add -A 2>&1 | Out-Null
+
+        # Guardia: buscar posibles secretos en las lineas añadidas antes de commitear.
+        # Se recorre linea a linea para saber en que archivo esta el hit (cabecera "+++ b/...")
+        # sin imprimir nunca la linea que contiene el secreto.
+        $diffLines = & git -C $r.Path diff --cached -U0 2>$null
+        $currentFile = $null
+        $secretFile = $null
+        foreach ($line in $diffLines) {
+            if ($line -match '^\+\+\+ b/(.+)$') {
+                $currentFile = $matches[1]
+                continue
+            }
+            if ($line -match '^\+[^+]' -and $line -match $secretPattern) {
+                $secretFile = $currentFile
+                break
+            }
+        }
+        if ($secretFile) {
+            & git -C $r.Path reset 2>&1 | Out-Null
+            $results += "$($r.Name): BLOCKED (posible secreto en $secretFile, sin commit)"
+            Log "$($r.Name): BLOCKED - posible secreto en $secretFile, git reset ejecutado"
+            continue
+        }
+
         $changed = @(& git -C $r.Path diff --cached --name-only 2>$null)
         $count = $changed.Count
         if ($count -gt 0) {

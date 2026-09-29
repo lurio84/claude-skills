@@ -25,7 +25,9 @@ $repos = @(
 $secretPattern = 'sk-(cp-)?[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[bp]-[0-9A-Za-z-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY'
 
 $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm')
-$host_ = $env:COMPUTERNAME
+# Both machines are named LURIO84; tag by chassis type instead (2 = mobile).
+$kind = if ((Get-CimInstance Win32_ComputerSystem).PCSystemType -eq 2) { 'portatil' } else { 'torre' }
+$host_ = "$env:COMPUTERNAME-$kind"
 
 # Token de lurio84 via gh CLI (necesario para push a repos privados de lurio84).
 $lurioToken = & gh auth token --user lurio84 2>$null

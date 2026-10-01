@@ -5,55 +5,56 @@ description: Closing ritual for a chat session. Reviews what was done, persists 
 
 # Cerrar Chat
 
-Ritual de cierre de sesión. **Solo se ejecuta cuando Lucas escribe `/cerrar-chat`** — no auto-dispararse al detectar "cerramos" en prosa.
+Session closing ritual. **Runs only when Lucas types `/cerrar-chat`** — don't self-trigger on "cerramos" in prose.
 
-No reescribas las reglas de cierre: este skill **las ejecuta**. La política vive en `CLAUDE.md` (§ "Política de cierre de sesión") y en las memorias `feedback_cierre_chat` / `feedback_memoria_vault`. Si hay conflicto, mandan esas fuentes.
+Don't rewrite the closing rules: this skill **executes** them. The policy lives in `CLAUDE.md` (§ "Session closing policy") and in the memories `feedback_cierre_chat` / `feedback_memoria_vault`. On conflict, those sources win.
 
-## Pasos
+## Steps
 
-### 1. Resumen de la sesión
-2-4 bullets de qué se hizo realmente este chat.
+### 1. Session summary
+2-4 bullets of what was actually done in this chat.
 
-Si el chat fue **trivial** (un ack, una pregunta suelta ya respondida, esperar acción de un tercero, copy-paste de algo ya preparado): dilo en una línea y salta directo al paso 5. No ejecutes el ritual completo sobre nada. El criterio de "trivial" vive aquí, no en el trigger.
+If the chat was **trivial** (an ack, a single question already answered, waiting on a third party, copy-paste of something already prepared): say so in one line and jump straight to step 5. Don't run the full ritual over nothing. The "trivial" criterion lives here, not in the trigger.
 
-### 2. Persistir en vault
-¿Algo merece sobrevivir al chat? — decisiones tomadas, hashes de commit, hallazgos, cambio de estado de un proyecto. Guárdalo directamente en la nota que corresponda; no preguntes salvo ambigüedad real de dónde va.
+### 2. Persist to the vault
+Does anything deserve to outlive the chat? — decisions taken, commit hashes, findings, a project changing state. Save it directly in the matching note; don't ask unless where it goes is genuinely ambiguous.
 
-Reglas del vault (`C:\Users\lucas\SecondBrain`):
-- Antes de crear nota nueva, verifica con Glob/Grep que no exista una similar.
-- Wikilinks `[[nota]]` solo con el nombre (sin ruta), frontmatter YAML, español.
-- No guardes lo que el repo o el vault ya registran por sí mismos.
+Vault rules (`C:\Users\lucas\SecondBrain`):
+- Before creating a new note, check with Glob/Grep that no similar one exists.
+- Wikilinks `[[note]]` by name only (no path), YAML frontmatter, English (exceptions per `CLAUDE.md` § Language).
+- Don't save what the repo or the vault already records by itself.
+- Every factual claim you save (here or in memory, step 3) carries source + verification date; anything unverified is marked as intuition or not saved ([[feedback_memoria_vault]]).
 
-### 3. Actualizar memoria
-Solo si cambió el estado de un proyecto activo o surgió feedback nuevo. Edita el archivo existente en `memory/` (no dupliques) y ajusta su puntero en `MEMORY.md`. Si nada cambió a ese nivel, no toques memoria.
+### 3. Update memory
+Only if an active project changed state or new feedback came up. Edit the existing file in `memory/` (don't duplicate) and adjust its pointer in `MEMORY.md`. If nothing changed at that level, don't touch memory.
 
-### 4. Chequeo de wikilinks (notas tocadas hoy)
-Identifica las notas `.md` del vault modificadas en esta sesión:
+### 4. Wikilink check (notes touched today)
+Identify the vault `.md` notes modified this session:
 
 ```powershell
 git -C C:\Users\lucas\SecondBrain status --porcelain -- "*.md"
 ```
 
-Para SOLO esas notas:
-- **Wikilinks rotos reales** → arréglalos. **Excluye** `[[feedback_*]]`, `[[project_*]]`, `[[reference_*]]`, `[[user_*]]`: apuntan a memoria, son intencionales, NO son rotos (misma regla que `revisar-vault` Fase 4).
-- **Conexión obvia sin enlazar**: si la nota menciona literal el título exacto de otra nota existente del vault, envuélvelo en `[[]]` — solo en el cuerpo, nunca en frontmatter ni en bloques de código.
+For ONLY those notes:
+- **Real broken wikilinks** → fix them. **Exclude** `[[feedback_*]]`, `[[project_*]]`, `[[reference_*]]`, `[[user_*]]`: they point to memory, are intentional, NOT broken (same rule as `revisar-vault`).
+- **Obvious unlinked connection**: if the note literally mentions the exact title of another existing vault note, wrap it in `[[]]` — body only, never in frontmatter or code blocks.
 
-Si no hay notas tocadas, o no hay nada que arreglar, dilo en una línea y sigue. No inventes trabajo ni audites notas que no se tocaron hoy.
+If no notes were touched, or there's nothing to fix, say so in one line and move on. Don't invent work or audit notes not touched today.
 
-### 5. Prompt de continuación (CONDICIONAL)
-Ofrécelo **solo** si quedó trabajo a medias no trivial — estado mental complejo (debugging a medias, decisión en curso, hilo de razonamiento largo) que se perdería en un chat limpio. Si todo está cerrado y ya en memoria/vault, **no** ofrezcas prompt: es ruido.
+### 5. Continuation prompt (CONDITIONAL)
+Offer it **only** if non-trivial work was left mid-flight — complex mental state (half-done debugging, decision in progress, long reasoning thread) that would be lost in a clean chat. If everything is closed and already in memory/vault, **don't** offer a prompt: it's noise.
 
-### 6. Commit + push (sync manual)
-Como paso final, persistir a remoto ejecutando el script de sync (ya no hay hook automático que lo haga):
+### 6. Commit + push (manual sync)
+As the final step, persist to remote by running the sync script (there's no automatic hook doing it anymore):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/skills/sync/sync.ps1
 ```
 
-Mostrar el resultado por repo. Si algún repo reporta `PUSH FAILED` o `sin pushear`, avisar a Lucas (probablemente `gh` no logueado como `lurio84`). No cerrar declarando éxito si algún repo no llegó a `pushed` / `up to date`.
+Show the result per repo. If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas (probably `gh` not logged in as `lurio84`). Don't close declaring success if any repo didn't reach `pushed` / `up to date`.
 
-## Límites duros (lo que este skill NO hace)
-- **NO** invocar `/handoff` automáticamente. Es caro y solo merece la pena con estado mental complejo; esa decisión es de Lucas, no del skill. Como mucho, sugiérelo en una línea si el paso 5 detecta ese caso.
-- **NO** encadenar `/revisar-vault`. Esa es la revisión periódica pesada del vault completo, otro ámbito.
-- **NO** mover, renombrar, archivar ni fusionar notas. **NO** crear wikilinks a notas que no existen.
-- El commit + push del paso 6 es el ÚNICO que hace este skill. NO inventes otros commits ni toques repos fuera de los 3 del setup (`feedback_workflow_secondbrain`).
+## Hard limits (what this skill does NOT do)
+- **DON'T** invoke `/handoff` automatically. It's expensive and only worth it with complex mental state; that's Lucas's call, not the skill's. At most, suggest it in one line if step 5 detects that case.
+- **DON'T** chain `/revisar-vault`. That's the heavy periodic review of the whole vault, a different scope.
+- **DON'T** move, rename, archive or merge notes. **DON'T** create wikilinks to notes that don't exist.
+- The commit + push in step 6 is the ONLY one this skill makes. DON'T invent other commits or touch repos outside the 3 setup repos (`feedback_workflow_secondbrain`).

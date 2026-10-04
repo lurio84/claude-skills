@@ -47,7 +47,7 @@ EGC's EV course only links out — the real source is the wiki:
 
 ### 4b. AC (date-only tracking)
 
-Out of scope for content, but the 3ª convocatoria exam (currently 2026-10-30, hour/room unpublished) needs watching until it has a confirmed hour/room. Check the AC 202627 course's announcements each run until that's published, then this check can stop.
+Out of scope for content, but the 3ª convocatoria exam (currently 2026-10-30, hour/room unpublished) needs watching until it has a confirmed hour/room. Check the announcements of **both** the previous-year AC course (the sitting belongs to it; earlier sitting notices were posted there) and the current-year one, each run until that's published, then this check can stop. Course ids are in the vault hub.
 
 ### 5. Downloads
 

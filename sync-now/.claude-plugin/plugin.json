@@ -1,0 +1,1 @@
+{ "name": "sync-now", "version": "0.1.0", "description": "/sync-now runs the sync.ps1 commit+push of the three setup repos directly, with no model turn" }

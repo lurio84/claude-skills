@@ -64,6 +64,8 @@ Output: table `project | last note | age | flag`.
 2. **Content check**, for every `project_*` and `feedback_*` memory (read them yourself — they're small; no subagent):
    - **Still true?** Project state vs vault notes / repo / `git log`; feedback vs CLAUDE.md and other memories (contradictions).
    - **Sourced?** Factual claims (prices, states, numbers, tool behavior) carry source + date. Unsourced → verify now, mark as intuition, or drop.
+   - **Expired?** Classify each claim: Lucas's standing instruction (never expires) / external-world evaluation (model, price, tool, stack, "X doesn't work", "descartado" — flag if >3 months old) / situational state (project, goals, deadlines — flag if stale vs repo/EV). An evaluation without attribution is mine, not Lucas's — don't let it pose as a veto.
+   - **Verdicts where they're read:** evaluation verdicts in `MEMORY.md` index lines and both `CLAUDE.md` files must carry "(as of YYYY-MM)" on the same line — they get applied without opening the file.
    - **Right tier?** Hot index vs `MEMORY-archivo.md` per the split rule at the top of `MEMORY.md`; closed project → vault note + remove from memory.
 3. Output: table `memory | issue | proposed action (OK / fix / archive / delete)`. **Apply only after Lucas approves**, except broken-pointer typos. Set `modified:` on every file you touch.
 

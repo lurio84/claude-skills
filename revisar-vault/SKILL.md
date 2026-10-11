@@ -29,6 +29,13 @@ Don't hardcode sizes (number of notes/memories) in this file — measure them in
    ```
 3. Read the date of the last entry in `Yo/Revision-Vault.md` and report the gap since then. Count vault notes and memory files.
 
+### Phase 0b — Health snapshot (is the brain saturating or misleading?)
+
+1. Run `python -I ~/.claude/skills/revisar-vault/health.py`. It prints the size of what loads every session (`MEMORY.md`, both `CLAUDE.md`, SessionStart hook output), memory count, hot-index lines, and memories never opened via Read in the transcript window. The window is ~30 days: Claude Code prunes older transcripts.
+2. Append one row to the **Health trend** table in `Yo/Revision-Vault.md`. Flag (initial thresholds, intuition — tune them): always-loaded > 30 KB or +20 % since the last row; hot index > 60 lines.
+3. "Never Read" ≠ dead: a hot-index line or a `CLAUDE.md` pointer can do its job unread, and domain-gated memories (Dofus, games) are legitimately idle. Feed only **hot-index** entries that were never Read into Phase 3 as "condense into the index line or archive?" candidates.
+4. **Errors caused by the brain** — no regex catches them reliably (tested 2026-10-11: 3 hits, all false positives). Read `Inbox/Errores-Memoria.md` (in-the-moment log, see [[feedback_memoria_vault]]), then ask Lucas: "anything else since the last review?" Classify each case: (a) wrong/stale content in memory or vault → fix it in Phase 3; (b) rule was loaded but I ignored it → saturation signal, condense or move it; (c) my reasoning; (d) ambiguous request. Write the (a)/(b) counts in the trend row.
+
 ### Phase 1 — Open threads (main pillar)
 
 Sources:

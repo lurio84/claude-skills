@@ -10,6 +10,6 @@ Recorre cada rama del árbol de decisiones, resolviendo dependencias entre decis
 **Reglas:**
 - Una pregunta a la vez. No agrupes.
 - Si una pregunta se puede responder leyendo código, vault, memoria, o cualquier otra fuente disponible — hazlo tú en lugar de preguntar.
-- Marca el tipo de afirmación cuando aplique (`[DATO]` / `[OPINIÓN]` / `[INTUICIÓN]`) — coherente con [[feedback_etiquetar_certeza]].
+- Señala la certeza en prosa ("esto lo verifiqué en X", "intuyo que…"), sin etiquetas entre corchetes — ver [[feedback_etiquetar_certeza]].
 - No hagas la pregunta si la respuesta no cambia el plan materialmente. Para.
 - Cuando termines, resume las decisiones tomadas en bloque para que Lucas valide de un vistazo antes de implementar.

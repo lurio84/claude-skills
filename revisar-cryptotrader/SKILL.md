@@ -14,6 +14,19 @@ Workflow único: **`Crypto Signal Check`** corre en cron cada ~4h (GitHub Action
 
 ## Flujo del skill
 
+### Paso 0 — ¿El cron sigue vivo?
+
+Runs antiguos en verde **no** prueban que el cron corra: GitHub desactivó el workflow por inactividad (`disabled_inactivity`) del 2026-07-16 al 2026-10-13 y nadie lo vio. Comprobar primero:
+
+```bash
+gh workflow list -R lurio84/CryptoTrader --all            # debe decir "active"
+gh run list -R lurio84/CryptoTrader -w crypto-check.yml --event schedule -L 1 --json createdAt   # último run DEL CRON hace <5h (push/dispatch no cuentan)
+gh api repos/lurio84/CryptoTrader/commits/main --jq .commit.committer.date      # último commit <45 días
+```
+
+- Estado ≠ `active` o último run de hace >5h → **alerta roja**, es lo primero que se reporta.
+- Último commit en `main` de hace >45 días → el job `keepalive` (commit vacío mensual, cron `0 3 1 * *`) no está funcionando; avisar antes de que se cumplan los 60 días.
+
 ### Paso 1 — Estado de los runs
 
 Lista los últimos 10 runs:

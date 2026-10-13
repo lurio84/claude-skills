@@ -48,16 +48,14 @@ EGC's EV course only links out — the real source is the wiki:
 
 ### 4b. AC (date-only tracking)
 
-Out of scope for content, but the 3ª convocatoria exam (currently 2026-10-30, hour/room unpublished) needs watching until it has a confirmed hour/room. Check the announcements of **both** the previous-year AC course (the sitting belongs to it; earlier sitting notices were posted there) and the current-year one, each run until that's published, then this check can stop. Course ids are in the vault hub.
+Out of scope for content, but while the AC exam row in `Calendario-2026-27.md` has no confirmed hour/room, it needs watching. Check the announcements of **both** the previous-year AC course (the sitting belongs to it; earlier sitting notices were posted there) and the current-year one, each run until that's published, then this check can stop. Course ids are in the vault hub.
 
 ### 5. Downloads
 
 For each new/changed attachment:
-1. `browser_tabs new` with the download URL: `/learn/api/public/v1/courses/{courseId}/contents/{contentId}/attachments/{attachmentId}/download` (this redirects to a signed S3 URL — a "page closed" event is normal).
-2. `browser_tabs list` to read the resulting tab's URL.
-3. `curl -sSL -o <dest>` that signed URL to the matching `OneDrive/Universidad/2026-27/{subject}/...` path (mirror the EV folder structure; use `Organizacion/` for subject-root miscellany, matching the existing layout).
-4. Close that download tab (never the relay/first tab).
-5. **Never print or log the signed URL** — it carries temporary AWS credentials.
+1. In the EV tab, `browser_evaluate` an in-page `fetch` of `/learn/api/public/v1/courses/{courseId}/contents/{contentId}/attachments/{attachmentId}/download` and write only the final `r.url` (the signed S3 URL) to a file under the gitignored `SecondBrain/.playwright-mcp/` (Playwright can only write inside `SecondBrain/`). If the in-page `fetch` fails with "Failed to fetch" (seen on the `/ultra` SPA), navigate the tab to any `/learn/api/public/v1/...` URL first and retry from there.
+2. `curl -sSL -o <dest> "$(cat <that file>)"` to the matching `OneDrive/Universidad/2026-27/{subject}/...` path (mirror the EV folder structure; use `Organizacion/` for subject-root miscellany, matching the existing layout), then delete the file.
+3. **Never print or log the signed URL** — it carries temporary AWS credentials. Opening it in a tab and reading `browser_tabs list` prints it in the tool output, so avoid that route; if it is the only one that works, say so and don't repeat the URL anywhere.
 
 Re-download an existing local file only if EV's `modified` is newer than the local file's mtime — don't blindly re-fetch everything. There's no automatic name mapping between an EV attachment's `fileName` and the local filename (EV's internal names don't always match — e.g. an item titled "Problemas 8" was found with an attachment internally called `Problemas5.pdf`, unrelated content). Match by the **content item's title**, not the attachment's `fileName`; for a brand-new file, keep EV's `fileName` as-is. When in doubt whether an EV attachment is genuinely new/different content vs. a mislabeled duplicate, hash-compare before overwriting.
 

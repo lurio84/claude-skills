@@ -1,6 +1,6 @@
 ---
 name: setup-deepseek
-description: "Configures Claude Code step by step to use DeepSeek as an alternative provider (~5x cheaper than Sonnet). Designed for non-technical users — asks one thing at a time, verifies each step before moving on. No special hardware required, just a DeepSeek API key."
+description: "Configures Claude Code step by step to use DeepSeek as an alternative provider (cheaper than Claude's own models; check current pricing). Designed for non-technical users — asks one thing at a time, verifies each step before moving on. No special hardware required, just a DeepSeek API key."
 ---
 
 # Configurar Claude Code con DeepSeek
@@ -68,7 +68,7 @@ Explicale:
 > 3. Ejecuta: `C:\Users\TU_USUARIO\claude-deepseek.bat`
 > 4. Y ya — la interfaz es la misma de Claude Code pero usando DeepSeek
 >
-> Por defecto usa DeepSeek V4 Pro (el modelo potente, ~5x mas barato que Sonnet). Si quieres la version rapida (Flash, aun mas barata), anade el nombre al final: `C:\Users\TU_USUARIO\claude-deepseek.bat deepseek-v4-flash`
+> Por defecto usa DeepSeek V4 Pro (el modelo potente, mas barato que los modelos de Claude; mira los precios actuales). Si quieres la version rapida (Flash, aun mas barata), anade el nombre al final: `C:\Users\TU_USUARIO\claude-deepseek.bat deepseek-v4-flash`
 
 ### Paso 4 — Test rapido
 

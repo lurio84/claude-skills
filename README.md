@@ -9,7 +9,7 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 | [`handoff`](./handoff/SKILL.md) | Genera un documento de traspaso estructurado para que un agente nuevo retome la conversación. |
 | [`prepara-tarea`](./prepara-tarea/SKILL.md) | Checklist pre-tarea: scope, criterios de éxito, delegación y verificación E2E. Incluye modo investigación con citas obligatorias. |
 | [`revisar-cryptotrader`](./revisar-cryptotrader/SKILL.md) | Revisión semanal del proyecto CryptoTrader: estado de runs, alertas disparadas, diagnóstico y fix de fallos. |
-| [`setup-deepseek`](./setup-deepseek/SKILL.md) | Guía paso a paso para configurar Claude Code con DeepSeek (~5x más barato). Pensada para usuarios no técnicos. |
+| [`setup-deepseek`](./setup-deepseek/SKILL.md) | Guía paso a paso para configurar Claude Code con DeepSeek (más barato que los modelos de Claude). Pensada para usuarios no técnicos. |
 | [`statusline-setup`](./statusline-setup/SKILL.md) | Configura interactivamente el status line de Claude Code: campos, barras de progreso y ancho. Incluye `statusline.py` listo para usar. |
 | [`revisar-vault`](./revisar-vault/SKILL.md) | Revisión periódica del vault Obsidian: cierra hilos abiertos de auditorías previas, procesa Inbox. Output en `Yo/Revision-Vault.md` (nota viva, no nueva por fecha). |
 | [`verificar`](./verificar/SKILL.md) | Verificación obligatoria al cerrar cualquier tarea: ejecuta el comando real, muestra output y confirma resultado correcto. |
@@ -17,6 +17,10 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 | [`cerrar-chat`](./cerrar-chat/SKILL.md) | Ritual de cierre de sesión: revisa lo hecho, guarda en vault lo que merece guardarse, actualiza memoria, ofrece prompt de continuación si aplica. |
 | [`sync`](./sync/SKILL.md) | Commit + push manual de los 3 setup repos (claude-config, claude-skills, SecondBrain). Reemplaza el antiguo SessionEnd auto-commit. |
 | [`setup-minimax`](./setup-minimax/SKILL.md) | Configura Claude Code paso a paso para usar MiniMax como proveedor alternativo (con búsqueda web + multimodal). |
+| [`setup-opencode-local`](./setup-opencode-local/SKILL.md) | Step-by-step setup of a local LLM (llama.cpp) with the opencode CLI, sized to the detected VRAM; for non-technical users. |
+| [`revisar-uni`](./revisar-uni/SKILL.md) | On-demand sync of the current university term against the course platform (Blackboard) and course wiki; updates the vault calendar and hubs. |
+| [`jlhomelab`](./jlhomelab/SKILL.md) | How to connect to and deploy on a homelab server shared with another admin (VPN + SSH, resource/port limits, own tunnel). Maintained by the server's owner; copied here. |
+| [`sync-now`](./sync-now/) | Claude Code mod (plugin folder, no SKILL.md): `/sync-now` runs `sync/sync.ps1` directly, with no model turn. |
 
 ## Cómo usarlo en otra máquina
 

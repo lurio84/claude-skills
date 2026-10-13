@@ -43,6 +43,7 @@ EGC's EV course only links out — the real source is the wiki:
 - WebFetch the course page and "Planificación" at `egc.us.es/cursos/egc-20262027`.
 - WebFetch `t.me/s/egcetsii` (public Telegram preview) for announcements. **Always fetch this — it's the primary channel, don't skip it even when EV/wiki look quiet.**
 - Also check EV announcements for the EGC course, in case anything is posted there directly.
+- **InnoSoft-related theory sessions**: any wiki/Telegram/EV mention that a theory class is tied to InnoSoft (sessions marked "(Innosoft)" in the Planificación, attendance-hour rules, Evidentia) must always be called out in the report — Lucas wants to attend those. Cross-check against the InnoSoft table in the EGC hub and flag anything new or changed.
 - The wiki won't show up as a "dated announcement" for new undated material (e.g. a practice's enunciado going from "pendiente de publicar" to live). Cross-check the wiki's practice/document links against the EGC hub's table of practices/topics, not just a "what changed recently" prompt.
 
 ### 4b. AC (date-only tracking)

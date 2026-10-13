@@ -16,7 +16,6 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 | [`grill-me`](./grill-me/SKILL.md) | Modo entrevista intensiva sobre un plan o diseño: pregunta una a una recorriendo el árbol de decisiones, con recomendación incluida. |
 | [`cerrar-chat`](./cerrar-chat/SKILL.md) | Ritual de cierre de sesión: revisa lo hecho, guarda en vault lo que merece guardarse, actualiza memoria, ofrece prompt de continuación si aplica. |
 | [`sync`](./sync/SKILL.md) | Commit + push manual de los 3 setup repos (claude-config, claude-skills, SecondBrain). Reemplaza el antiguo SessionEnd auto-commit. |
-| [`setup-minimax`](./setup-minimax/SKILL.md) | Configura Claude Code paso a paso para usar MiniMax como proveedor alternativo (con búsqueda web + multimodal). |
 | [`setup-opencode-local`](./setup-opencode-local/SKILL.md) | Step-by-step setup of a local LLM (llama.cpp) with the opencode CLI, sized to the detected VRAM; for non-technical users. |
 | [`revisar-uni`](./revisar-uni/SKILL.md) | On-demand sync of the current university term against the course platform (Blackboard) and course wiki; updates the vault calendar and hubs. |
 | [`jlhomelab`](./jlhomelab/SKILL.md) | How to connect to and deploy on a homelab server shared with another admin (VPN + SSH, resource/port limits, own tunnel). Maintained by the server's owner; copied here. |

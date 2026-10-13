@@ -1,11 +1,11 @@
 ---
 name: sync
-description: Manually commit and push the three setup repos (claude-config, claude-skills, SecondBrain) on demand. Use when Lucas says "/sync", "guarda", "haz commit y push", "sube los cambios", or wants to persist local changes to GitHub. Replaces the old SessionEnd auto-commit hook.
+description: Manually commit and push the three setup repos (claude-config, claude-skills, SecondBrain) on demand. Use when Lucas says "/sync", "guarda", "haz commit y push", "sube los cambios", or wants to persist local changes to GitHub.
 ---
 
 # Sync — commit + push manual
 
-Commit y push de los 3 repos del setup **cuando Lucas lo pida**. Sustituye al antiguo hook `SessionEnd` (que solo commiteaba y disparaba "Hook cancelled"). El pull sigue siendo automático al arrancar (`SessionStart`).
+Commit y push de los 3 repos del setup **cuando Lucas lo pida**. El pull es automático al arrancar (`SessionStart`).
 
 ## Paso único
 

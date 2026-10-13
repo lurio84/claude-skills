@@ -25,7 +25,7 @@ Pregunta al usuario qué campos quiere mostrar usando AskUserQuestion con `multi
 
 | Campo | Qué muestra |
 |---|---|
-| Modelo | Nombre del modelo activo, ej. "Sonnet 4.6" |
+| Modelo | Nombre del modelo activo, ej. "Opus 5.5" |
 | Contexto | % de ventana de contexto usada |
 | Coste | Coste acumulado de la sesión en $ |
 | Rate limit 5h | % del límite de 5 horas consumido |
@@ -153,7 +153,7 @@ Si no, añádelo. En Windows usar la ruta absoluta con `/` (no `\`).
 Ejecuta con JSON de prueba y muestra el output raw:
 
 ```bash
-echo '{"model":{"display_name":"Claude Sonnet 4.6"},"context_window":{"used_percentage":42},"cost":{"total_cost_usd":0.123},"rate_limits":{"five_hour":{"used_percentage":80},"seven_day":{"used_percentage":12}},"effort":{"level":"high"},"thinking":{"enabled":false}}' | python ~/.claude/statusline.py
+echo '{"model":{"display_name":"Claude Opus 5.5"},"context_window":{"used_percentage":42},"cost":{"total_cost_usd":0.123},"rate_limits":{"five_hour":{"used_percentage":80},"seven_day":{"used_percentage":12}},"effort":{"level":"high"},"thinking":{"enabled":false}}' | python ~/.claude/statusline.py
 ```
 
 Si hay UnicodeEncodeError: añadir `sys.stdout.reconfigure(encoding='utf-8')` al inicio del script.

@@ -11,13 +11,8 @@ disable-model-invocation: false
 ## Antes de declarar éxito — checklist por tipo de tarea
 
 ### Código (Java/Node/Python/Go/Rust)
-1. Identifica comando de verify del proyecto:
-   - Java/Maven: `mvn test` o `mvn verify`
-   - Node: `npm test` o `npm run build`
-   - Python: `pytest` o `python -m pytest`
-   - Go: `go test ./...`
-   - Rust: `cargo test` o `cargo check`
-2. Si no hay tests: al menos compila/lint (`npm run build`, `mvn compile`, `cargo check`).
+1. Identifica el comando de verify del propio proyecto (scripts del manifest, workflow de CI, `CLAUDE.md` del repo).
+2. Si no hay tests: al menos compila/lint.
 3. Ejecuta el comando COMPLETO. No atajos. No "debería funcionar".
 4. Muestra el output real. Si hay failures, mostrarlos textualmente.
 5. Si falla → no has terminado. Arregla y vuelve a verificar.

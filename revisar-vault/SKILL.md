@@ -177,4 +177,3 @@ If 3 consecutive runs produce no action closed by Lucas → archive the skill an
 ## References
 
 - Related memories: [[feedback_memoria_vault]], [[feedback_cierre_chat]], [[feedback_obsidian_first]], [[feedback_revisar_vault_metodologia]]
-- Phase 3 (semantic connections via Explore) was removed on 2026-10-01 by Lucas's decision: expensive, and not the current problem.

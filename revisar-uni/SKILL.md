@@ -19,6 +19,8 @@ Sources of truth for the current term live in the vault under `Universidad/2026-
 
 Use `mcp__playwright__*` (Lucas's real logged-in Chrome — this needs his EV session, not the isolated plugin browser).
 
+**Expect to need a login first**: the EV session in that Chrome is usually expired (401 at the start of most runs). So at the very start, before any other step, navigate the tab to `https://ev.us.es` and ask Lucas to log in (2FA). Wait for his "listo", then run the checks below.
+
 1. `browser_tabs list` — confirm a tab exists. Never close the last tab (it tears down the extension relay).
 2. `browser_evaluate` an absolute-URL fetch to `https://ev.us.es/learn/api/public/v1/users/me/courses?expand=course&limit=100`.
 3. If this returns 401/403, or a tab is sitting on the EV splash page or `sso.us.es` → **stop and ask Lucas to log in manually (2FA)**. Don't retry, don't guess a workaround.
@@ -40,7 +42,7 @@ For each course:
 ### 4. EGC (wiki-native)
 
 EGC's EV course only links out — the real source is the wiki:
-- WebFetch the course page at `egc.us.es/cursos/egc-20262027`. The "Planificación" is not its own page (`/planificacion` 404s): it's the weekly-planning PDF linked from `/documento/organizacion`. `curl` it to the scratchpad and hash-compare against the local copy in `OneDrive/.../EGC/Organizacion/` — identical hash = no schedule change; only read it if it differs.
+- WebFetch the course page at `egc.us.es/cursos/egc-20262027`. The "Planificación" is not its own page (`/planificacion` 404s): it's the weekly-planning PDF linked from `/cursos/egc-20262027/documento/organizacion` (the bare `/documento/organizacion` 404s). `curl` it to the scratchpad and hash-compare against the local copy in `OneDrive/.../EGC/Organizacion/` — identical hash = no schedule change; only read it if it differs.
 - WebFetch `t.me/s/egcetsii` (public Telegram preview) for announcements. **Always fetch this — it's the primary channel, don't skip it even when EV/wiki look quiet.**
 - Also check EV announcements for the EGC course, in case anything is posted there directly.
 - **InnoSoft-related theory sessions**: any wiki/Telegram/EV mention that a theory class is tied to InnoSoft (sessions marked "(Innosoft)" in the Planificación, attendance-hour rules, Evidentia) must always be called out in the report — Lucas wants to attend those. Cross-check against the InnoSoft table in the EGC hub and flag anything new or changed.

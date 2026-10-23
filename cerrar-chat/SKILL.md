@@ -54,7 +54,6 @@ powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/skills/sync/sync
 Show the result per repo. If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas (probably `gh` not logged in as `lurio84`). Don't close declaring success if any repo didn't reach `pushed` / `up to date`.
 
 ## Hard limits (what this skill does NOT do)
-- **DON'T** invoke `/handoff` automatically. It's expensive and only worth it with complex mental state; that's Lucas's call, not the skill's. At most, suggest it in one line if step 5 detects that case.
 - **DON'T** chain `/revisar-vault`. That's the heavy periodic review of the whole vault, a different scope.
 - **DON'T** move, rename, archive or merge notes. **DON'T** create wikilinks to notes that don't exist.
 - The commit + push in step 6 is the ONLY one this skill makes. DON'T invent other commits or touch repos outside the 3 setup repos (`feedback_workflow_secondbrain`).

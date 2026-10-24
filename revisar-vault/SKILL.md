@@ -32,7 +32,7 @@ Don't hardcode sizes (number of notes/memories) in this file — measure them in
 ### Phase 0b — Health snapshot (is the brain saturating or misleading?)
 
 1. Run `python -I ~/.claude/skills/revisar-vault/health.py`. It prints the size of what loads every session (`MEMORY.md`, both `CLAUDE.md`, SessionStart hook output), memory count, hot-index lines, and memories never opened via Read in the transcript window. The window is ~30 days: Claude Code prunes older transcripts.
-2. Append one row to the **Health trend** table in `Yo/Revision-Vault.md`. Flag (initial thresholds, intuition — tune them): always-loaded > 30 KB or +20 % since the last row; hot index > 60 lines.
+2. Append one row to the **Health trend** table in `Yo/Revision-Vault.md`. Flag (initial thresholds, intuition — tune them): always-loaded > 30 KB or +20 % since the last row; hot index > 60 lines. For the "live notes > 40 KB" list, flag only notes that grew since the last review, or that sessions read in full. Rarely-read big notes (e.g. `Waystone`, read whole once in 30 days as of 2026-10-24) are fine. A flagged hub → propose moving its dated sections to the topic's `-Historico` note.
 3. "Never Read" ≠ dead: a hot-index line or a `CLAUDE.md` pointer can do its job unread, and domain-gated memories (Dofus, games) are legitimately idle. Feed only **hot-index** entries that were never Read into Phase 3 as "condense into the index line or archive?" candidates.
 4. **Errors caused by the brain** — no regex catches them reliably (tested 2026-10-11: 3 hits, all false positives). Read `Inbox/Errores-Memoria.md` (in-the-moment log, see [[feedback_memoria_vault]]), then ask Lucas: "anything else since the last review?" Classify each case: (a) wrong/stale content in memory or vault → fix it in Phase 3; (b) rule was loaded but I ignored it → saturation signal, condense or move it; (c) my reasoning; (d) ambiguous request. Write the (a)/(b) counts in the trend row.
 
@@ -128,7 +128,7 @@ Apply automatically, listing in the living note what was applied:
 
 ### Phase 6 — Output: update `Yo/Revision-Vault.md`
 
-Living note. The new review goes on top; previous ones collapse into a `> [!summary]-` callout. Keep it short — the value is in what's actionable.
+Living note. The new review goes on top; the previous one collapses into a `> [!summary]-` callout. Any older review moves verbatim to the top of `Yo/_archivo/Revision-Vault-Historico.md` (newest first), so the living note holds the Health trend plus the last 2 reviews. Keep it short — the value is in what's actionable.
 
 ```markdown
 ## Review YYYY-MM-DD (focus: ...)

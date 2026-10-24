@@ -27,3 +27,8 @@ print(f"window: {min(dates)} -> {max(dates)}, sessions {sessions}")
 print(f"always-loaded: {total/1024:.1f} KB (hook {len(hook.encode())/1024:.1f} KB; " + ", ".join(f"{os.path.basename(os.path.dirname(p))}/{os.path.basename(p)} {s/1024:.1f}" for p, s in sizes.items()) + ")")
 print(f"memories: {len(mems)}, hot-index lines: {hot}, never Read in window: {len(unused)}")
 print("never Read:", " ".join(m[:-3] for m in unused))
+# Live notes over 40 KB (threshold is intuition): usually a hub accumulating dated logs that belong in its -Historico note.
+V = "C:/Users/lucas/SecondBrain"
+big = sorted((os.path.getsize(p), os.path.relpath(p, V)) for p in glob.glob(f"{V}/**/*.md", recursive=True)
+             if "_archivo" not in p.replace("\\", "/") and "Historico" not in os.path.basename(p) and os.path.getsize(p) > 40_000)
+print("live notes > 40 KB:", ", ".join(f"{n} {s/1024:.0f} KB" for s, n in reversed(big)) or "none")

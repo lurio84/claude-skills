@@ -80,6 +80,6 @@ Close in Spanish with:
 ## Notes
 
 - If EV can't be reached this run, say so plainly and don't touch `ev_last_sync` — a failed run is not a sync.
-- A run limited to one subject (e.g. "solo PGPI") must not change `ev_last_sync`: it is shared by all subjects, and moving it would skip the others' new items. Record the partial check in that subject's hub instead.
+- A run limited to one subject (e.g. "solo PGPI") must not change `ev_last_sync`: it is shared by all subjects, and moving it would skip the others' new items. Record the partial check in that subject's hub instead, by replacing its "last EV check" line, not by adding a new dated section.
 - Keep tool output small: print `same`/`changed`, hashes, counts or `| tail` instead of file contents; never `cat` a hub or a JSON dump. Every extra KB is re-read on every later turn of the run.
 - Don't write personal data (group numbers, member names, emails, professor names) into this file — it belongs in the vault hubs, which stay private.

@@ -5,7 +5,8 @@ MEM = f"{H}/projects/C--Users-lucas-SecondBrain/memory"
 TR = f"{H}/projects/C--Users-lucas-SecondBrain"
 hook = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", f"{H}/hooks/session-start.ps1"],
                       capture_output=True, input=json.dumps({"cwd": "C:\\Users\\lucas\\SecondBrain"}), text=True, encoding="utf-8").stdout
-sizes = {p: os.path.getsize(p) for p in [f"{MEM}/MEMORY.md", "C:/Users/lucas/SecondBrain/CLAUDE.md", f"{H}/CLAUDE.md"]}
+# Global rules moved from ~/.claude/CLAUDE.md into SecondBrain/.claude/CLAUDE.md on 2026-10-23.
+sizes = {p: os.path.getsize(p) for p in [f"{MEM}/MEMORY.md", "C:/Users/lucas/SecondBrain/CLAUDE.md", "C:/Users/lucas/SecondBrain/.claude/CLAUDE.md"]}
 total = sum(sizes.values()) + len(hook.encode())
 mems = sorted(os.path.basename(p) for p in glob.glob(f"{MEM}/*.md") if not os.path.basename(p).startswith("MEMORY"))
 hot = sum(1 for l in open(f"{MEM}/MEMORY.md", encoding="utf-8") if l.startswith("- ["))

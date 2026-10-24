@@ -20,6 +20,7 @@ Skills personales para Claude Code. Procedimientos repetibles que Claude ejecuta
 | [`revisar-uni`](./revisar-uni/SKILL.md) | On-demand sync of the current university term against the course platform (Blackboard) and course wiki; updates the vault calendar and hubs. |
 | [`jlhomelab`](./jlhomelab/SKILL.md) | How to connect to and deploy on a homelab server shared with another admin (VPN + SSH, resource/port limits, own tunnel). Maintained by the server's owner; copied here. |
 | [`sync-now`](./sync-now/) | Claude Code mod (plugin folder, no SKILL.md): `/sync-now` runs `sync/sync.ps1` directly, with no model turn. |
+| [`task-progress`](./task-progress/) | Claude Code mod (plugin folder, no SKILL.md): a progress bar above the prompt for each background Bash/PowerShell task (reads `PROGRESS n/m`, tqdm or `NN%` from its output), a `/logs` pane with the live log, and a toast when it ends. |
 
 ## Cómo usarlo en otra máquina
 

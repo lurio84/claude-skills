@@ -72,7 +72,9 @@ foreach ($r in $repos) {
         $changed = @(& git -C $r.Path diff --cached --name-only 2>$null)
         $count = $changed.Count
         if ($count -gt 0) {
-            $preview = $changed | Select-Object -First 5
+            # git quotes non-ASCII paths ("Automatizaci\303\263n financiera.md"); an embedded quote
+            # breaks PS 5.1 argument passing and git reads the message as a pathspec (2026-10-24).
+            $preview = $changed | Select-Object -First 5 | ForEach-Object { $_ -replace '"', '' }
             $msg = "chore(sync): $timestamp from $host_ -- $count file(s): $($preview -join ', ')"
             if ($count -gt 5) { $msg += " ...and $($count - 5) more" }
             $commitOut = & git -C $r.Path commit -m $msg 2>&1

@@ -43,6 +43,14 @@ For ONLY those notes:
 
 If no notes were touched, or there's nothing to fix, say so in one line and move on. Don't invent work or audit notes not touched today.
 
+### 4b. Re-read pass (what the advisor used to catch)
+Lucas doesn't want to call the advisor on every close, so do this pass yourself. Re-read the files from disk; don't rely on what you remember writing. Scope: the notes from step 4, the memory files edited this session, and the hub of every topic whose state changed this session, even if you didn't edit that hub.
+- **State sections.** Read each hub's "Estado" or current-state section and each edited memory's state lines. Every line must be true *now*, and its date or "as of" header must be updated. If a memory and its hub both state the same thing, the hub is the source: cut the memory line down to a pointer.
+- **Temporary source files.** Grep those notes for `Downloads`, `AppData\Local\Temp` and `scratchpad`. If a note cites a file there as a source, copy it to a permanent place (the subject's OneDrive folder or the vault) and repoint the note.
+- **Claims written this session.** Each claim needs the source it was read from. If you saw it only in a search-result summary or recalled it from memory, mark it as unconfirmed.
+
+Measured 2026-10-26 over 145 closes: about 14 % needed a fix afterwards. The largest group was stale hub or memory state (about 7). The next were claims overstated or unsupported by their source (about 5) and source files left in Downloads (2 to 3).
+
 ### 5. Continuation prompt (CONDITIONAL)
 Offer it **only** if non-trivial work was left mid-flight — complex mental state (half-done debugging, decision in progress, long reasoning thread) that would be lost in a clean chat. If everything is closed and already in memory/vault, **don't** offer a prompt: it's noise.
 

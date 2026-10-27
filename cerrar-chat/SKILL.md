@@ -1,13 +1,14 @@
 ---
 name: cerrar-chat
-description: Closing ritual for a chat session. Reviews what was done, persists what merits saving to the Obsidian vault, updates memory if stale, checks wikilinks of notes touched this session, and offers a continuation prompt ONLY if work was left mid-flight. Use ONLY when the user explicitly invokes /cerrar-chat — do NOT auto-trigger on "cerramos".
+description: Session closing ritual — persist to vault and memory, check wikilinks, sync the setup repos.
+disable-model-invocation: true
 ---
 
 # Cerrar Chat
 
-Session closing ritual. **Runs only when Lucas types `/cerrar-chat`** — don't self-trigger on "cerramos" in prose.
+Session closing ritual. Runs only when Lucas types `/cerrar-chat`; `disable-model-invocation` keeps Claude from starting it on "cerramos" in prose.
 
-Don't rewrite the closing rules: this skill **executes** them. The policy lives in `CLAUDE.md` (§ "Session closing policy") and in the memories `feedback_cierre_chat` / `feedback_memoria_vault`. On conflict, those sources win.
+This skill is the single source for the closing ritual (`CLAUDE.md` § "Session closing" points here). The general vault/memory rules it applies live in `feedback_memoria_vault`.
 
 ## Steps
 
@@ -21,7 +22,7 @@ Does anything deserve to outlive the chat? — decisions taken, commit hashes, f
 
 Vault rules (`C:\Users\lucas\SecondBrain`):
 - Before creating a new note, check with Glob/Grep that no similar one exists.
-- Wikilinks `[[note]]` by name only (no path), YAML frontmatter, English (exceptions per `CLAUDE.md` § Language).
+- Wikilinks `[[note]]` by name only (no path), YAML frontmatter, English (exceptions per `CLAUDE.md` § "Language & style").
 - Don't save what the repo or the vault already records by itself.
 - Every factual claim you save (here or in memory, step 3) carries source + verification date; anything unverified is marked as intuition or not saved ([[feedback_memoria_vault]]).
 
@@ -31,13 +32,13 @@ Only if an active project changed state or new feedback came up. Edit the existi
 - A new memory goes to the hot index only if it passes the split rule at the top of `MEMORY.md`. Domain-gated references go to `MEMORY-archivo.md`.
 
 ### 4. Wikilink check (notes touched today)
-Identify the vault `.md` notes modified this session:
+Identify the vault `.md` notes modified this session: the ones in your own Edit/Write calls, plus whatever this shows (a sync earlier in the session may already have committed some, so git status alone misses them):
 
 ```powershell
 git -C C:\Users\lucas\SecondBrain status --porcelain -- "*.md"
 ```
 
-For ONLY those notes:
+For only those notes (auditing the rest is `/revisar-vault`'s job):
 - **Real broken wikilinks** → fix them. **Exclude** `[[feedback_*]]`, `[[project_*]]`, `[[reference_*]]`, `[[user_*]]`: they point to memory, are intentional, NOT broken (same rule as `revisar-vault`).
 - **Obvious unlinked connection**: if the note literally mentions the exact title of another existing vault note, wrap it in `[[]]` — body only, never in frontmatter or code blocks.
 
@@ -63,7 +64,7 @@ powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/skills/sync/sync
 
 Show the result per repo. If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas (probably `gh` not logged in as `lurio84`). Don't close declaring success if any repo didn't reach `pushed` / `up to date`.
 
-## Hard limits (what this skill does NOT do)
-- **DON'T** chain `/revisar-vault`. That's the heavy periodic review of the whole vault, a different scope.
-- **DON'T** move, rename, archive or merge notes. **DON'T** create wikilinks to notes that don't exist.
-- The commit + push in step 6 is the ONLY one this skill makes. DON'T invent other commits or touch repos outside the 3 setup repos (`feedback_workflow_secondbrain`).
+## Limits (what this skill doesn't do)
+- Don't chain `/revisar-vault`: it's the heavy whole-vault review, costs far more than a close, and Lucas runs it on his own schedule.
+- Don't move, rename, archive or merge notes: that breaks wikilinks across the vault and is a structural call Lucas makes. Don't create wikilinks to notes that don't exist: they read as real links and rot into broken ones.
+- The step-6 sync is the only commit this skill makes. Code repos are committed from their own cwd, on Lucas's request (`feedback_workflow_secondbrain`); a close that commits them would push work he hasn't reviewed.

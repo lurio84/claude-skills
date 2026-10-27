@@ -1,24 +1,25 @@
 ---
 name: sync
-description: Manually commit and push the three setup repos (claude-config, claude-skills, SecondBrain) on demand. Use when Lucas says "/sync", "guarda", "haz commit y push", "sube los cambios", or wants to persist local changes to GitHub.
+description: Commit and push the three setup repos (claude-config, claude-skills, SecondBrain) on demand.
+disable-model-invocation: true
 ---
 
-# Sync — commit + push manual
+# Sync — manual commit + push
 
-Commit y push de los 3 repos del setup **cuando Lucas lo pida**. El pull es automático al arrancar (`SessionStart`).
+Commits and pushes the 3 setup repos, only when Lucas types `/sync`. `disable-model-invocation` keeps a casual "guarda esto" from pushing three repos (one public); normally `/cerrar-chat` runs the same script at the end. Pull is automatic at startup (`SessionStart`).
 
-## Paso único
+## Single step
 
-Ejecutar el script y reportar su salida tal cual, por repo:
+Run the script and report its output per repo, as is:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/skills/sync/sync.ps1
 ```
 
-El script, por cada repo (`claude-config`, `claude-skills`, `SecondBrain`):
-1. Commitea si hay cambios (`chore(sync): ...`).
-2. Pushea si hay commits por delante de upstream, con el token de `lurio84` vía `gh` (un push plano da 404 en los repos privados por el GCM cacheado con HGK2646).
+For each repo (`claude-config`, `claude-skills`, `SecondBrain`) the script:
+1. Commits if there are changes (`chore(sync): ...`).
+2. Pushes if there are commits ahead of upstream, with the `lurio84` token via `gh` (a plain push gets 404 on the private repos because GCM has HGK2646 cached).
 
-## Verificar
+## Verify
 
-Si algún repo reporta `PUSH FAILED` o `sin pushear`, avisar a Lucas: probablemente `gh` no está logueado como `lurio84` (`gh auth status`) o hay un problema de red. No declarar éxito si algún repo no llegó a `pushed` / `up to date`.
+If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas: probably `gh` isn't logged in as `lurio84` (`gh auth status`) or there's a network problem. Don't declare success unless every repo reached `pushed` / `up to date`.

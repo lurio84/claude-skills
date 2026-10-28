@@ -1,13 +1,14 @@
 # Skill `sync` -- commit + push manual de los 3 repos del setup (claude-config,
 # claude-skills, SecondBrain). Sustituye al hook SessionEnd (que solo commiteaba y
 # disparaba "Hook cancelled"). Se invoca a mano via /sync o como paso final de /cerrar-chat.
-# Commit: logica de sync-push.ps1. Push: bloque con token de sync-pull.ps1 (el GCM tiene
-# cacheada otra cuenta de GitHub y un push plano da 404 en los repos privados de lurio84).
+# Commit: logica de sync-push.ps1. Push: plain git; the global ~/.gitconfig routes github.com
+# to `gh auth git-credential` (active account lurio84), verified on the tower 2026-10-28.
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Continue'
 $env:GIT_TERMINAL_PROMPT = '0'
+$env:GCM_INTERACTIVE = 'never'
 
 $logFile = Join-Path $env:USERPROFILE '.claude\hooks\sync-push.log'
 function Log($msg) {
@@ -29,11 +30,9 @@ $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm')
 $kind = if ((Get-CimInstance Win32_ComputerSystem).PCSystemType -eq 2) { 'portatil' } else { 'torre' }
 $host_ = "$env:COMPUTERNAME-$kind"
 
-# Token de lurio84 via gh CLI (necesario para push a repos privados de lurio84).
-$lurioToken = & gh auth token --user lurio84 2>$null
-
 Log "=== sync (manual) start ==="
-$results = @()
+# Repair the gh git helper before pushing (covers a machine whose SessionStart hook predates setup-check).
+$results = @(& (Join-Path $env:USERPROFILE '.claude\hooks\setup-check.ps1') | ForEach-Object { "setup-check: $_" })
 
 foreach ($r in $repos) {
     if (-not (Test-Path (Join-Path $r.Path '.git'))) {
@@ -85,23 +84,14 @@ foreach ($r in $repos) {
     # --- PUSH (si hay commits por delante de upstream) ---
     $ahead = & git -C $r.Path rev-list --count '@{u}..HEAD' 2>$null
     if ($LASTEXITCODE -eq 0 -and $ahead -and [int]$ahead -gt 0) {
-        $pBranch = & git -C $r.Path rev-parse --abbrev-ref HEAD 2>$null
-        if ($lurioToken -and $pBranch) {
-            $pOrigin = & git -C $r.Path remote get-url origin 2>$null
-            $pAuth = $pOrigin -replace '^https://(?:[^@/]+@)?', "https://lurio84:$lurioToken@"
-            & git -C $r.Path -c credential.helper= push $pAuth $pBranch 2>&1 | Out-Null
-            if ($LASTEXITCODE -eq 0) {
-                & git -C $r.Path update-ref "refs/remotes/origin/$pBranch" HEAD 2>&1 | Out-Null
-                $sha = & git -C $r.Path rev-parse --short HEAD 2>$null
-                $results += "$($r.Name): pushed $ahead commit(s) (HEAD $sha)"
-                Log "$($r.Name): pushed $ahead -> $sha"
-            } else {
-                $results += "$($r.Name): PUSH FAILED ($ahead commit(s) sin pushear)"
-                Log "$($r.Name): push FAILED"
-            }
+        & git -C $r.Path -c credential.https://github.com.username=lurio84 push --quiet origin HEAD 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $sha = & git -C $r.Path rev-parse --short HEAD 2>$null
+            $results += "$($r.Name): pushed $ahead commit(s) (HEAD $sha)"
+            Log "$($r.Name): pushed $ahead -> $sha"
         } else {
-            $results += "$($r.Name): $ahead commit(s) sin pushear (sin token gh lurio84)"
-            Log "$($r.Name): no token / no branch"
+            $results += "$($r.Name): PUSH FAILED ($ahead commit(s) sin pushear)"
+            Log "$($r.Name): push FAILED"
         }
     } else {
         $results += "$($r.Name): up to date"

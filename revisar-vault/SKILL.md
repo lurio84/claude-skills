@@ -71,7 +71,7 @@ Output: table `project | last note | age | flag`.
 
 1. Empty notes or <200 bytes → list (no automatic action).
 2. Notes >5KB without YAML frontmatter → list, propose minimal frontmatter in Phase 5.
-   **Broken frontmatter** (script): `python -I ~/.claude/skills/revisar-vault/yamlcheck.py` plus `claude plugin validate ~/.claude/skills` (skill frontmatter). Fix every hit; usual cause is unquoted wikilinks (`["[[A]]", "[[B]]"]` is the valid form).
+   **Broken frontmatter** (script): `python -I ~/.claude/skills/revisar-vault/yamlcheck.py` plus `claude plugin validate ~/.claude/skills` (skill frontmatter). Quote the offending value directly (mechanical, like broken-pointer typos — no approval needed). Causes seen 2026-10-28: unquoted wikilink lists and `: ` inside an unquoted value.
 3. Real broken wikilinks — exclude the intentional ones to memory: `[[feedback_*]]`, `[[project_*]]`, `[[reference_*]]`, `[[user_*]]` are NOT broken.
 4. **Index notes disconnected from their domain hub**: a `*-Indice.md` / `INDEX-*.md` in a subfolder that the domain's parent index doesn't list → propose a bidirectional link.
 5. **Intra-domain orphans**: in a folder with an identifiable hub, every sibling note should be linked from the hub or from a sibling. Don't touch legitimately standalone notes.

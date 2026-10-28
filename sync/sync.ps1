@@ -2,7 +2,7 @@
 # claude-skills, SecondBrain). Sustituye al hook SessionEnd (que solo commiteaba y
 # disparaba "Hook cancelled"). Se invoca a mano via /sync o como paso final de /cerrar-chat.
 # Commit: logica de sync-push.ps1. Push: bloque con token de sync-pull.ps1 (el GCM tiene
-# cacheado HGK2646 y un push plano da 404 en los repos privados de lurio84).
+# cacheada otra cuenta de GitHub y un push plano da 404 en los repos privados de lurio84).
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8

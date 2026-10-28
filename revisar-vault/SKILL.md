@@ -58,16 +58,7 @@ Output: table `project | last note | age | flag`.
 
 ### Phase 3 — Memory audit (error propagation)
 
-1. **Index integrity** (script, no LLM):
-   ```bash
-   cd "C:/Users/lucas/.claude/projects/C--Users-lucas-SecondBrain/memory"
-   grep -ohE '\]\([^)]+\.md\)' MEMORY.md MEMORY-archivo.md | sed 's/](//;s/)//' | sort > /tmp/idx.txt
-   ls *.md | grep -vE '^MEMORY(-archivo)?\.md$' | sort > /tmp/files.txt
-   echo "broken pointers:"; comm -23 /tmp/idx.txt /tmp/files.txt
-   echo "unindexed files:"; comm -13 <(sort -u /tmp/idx.txt) /tmp/files.txt
-   echo "indexed twice:"; uniq -d /tmp/idx.txt
-   ```
-   Also grep both CLAUDE.md files for hardcoded counts or references to skills/files that no longer exist.
+1. **Reference + index integrity** (script, no LLM): `python -I ~/.claude/tools/refcheck.py`. It scans both CLAUDE.md files, `~/.claude/README.md`, all memories, skills and hooks for broken wikilinks, memory names, paths and `/commands`, plus index pointers to missing files, unindexed memories and double-indexed ones. Fix real breaks (some hits are false positives: example paths, intentional historical mentions). Also grep both CLAUDE.md files for hardcoded counts. Reason it exists: setup audits (2026-09-07, 09-24, 10-28) kept finding the same docs-vs-files drift; this makes the check mechanical.
 2. **Content check**, for every `project_*` and `feedback_*` memory (read them yourself — they're small; no subagent):
    - **Still true?** Project state vs vault notes / repo / `git log`; feedback vs CLAUDE.md and other memories (contradictions).
    - **Sourced?** Factual claims (prices, states, numbers, tool behavior) carry source + date. Unsourced → verify now, mark as intuition, or drop.
@@ -176,4 +167,4 @@ If 3 consecutive runs produce no action closed by Lucas → archive the skill an
 
 ## References
 
-- Related memories: [[feedback_memoria_vault]], [[feedback_cierre_chat]], [[feedback_obsidian_first]], [[feedback_revisar_vault_metodologia]]
+- Related memories: [[feedback_memoria_vault]], [[feedback_contexto_lo_decide_lucas]], [[feedback_obsidian_first]], [[feedback_revisar_vault_metodologia]]

@@ -18,7 +18,7 @@ powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/skills/sync/sync
 
 For each repo (`claude-config`, `claude-skills`, `SecondBrain`) the script:
 1. Commits if there are changes (`chore(sync): ...`).
-2. Pushes if there are commits ahead of upstream, with the `lurio84` token via `gh` (a plain push gets 404 on the private repos because GCM has HGK2646 cached).
+2. Pushes if there are commits ahead of upstream, with the `lurio84` token via `gh` (a plain push gets 404 on the private repos because GCM caches a different GitHub account).
 
 ## Verify
 

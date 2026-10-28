@@ -50,7 +50,7 @@ Lucas doesn't want to call the advisor on every close, so do this pass yourself.
 - **Temporary source files.** Grep those notes for `Downloads`, `AppData\Local\Temp` and `scratchpad`. If a note cites a file there as a source, copy it to a permanent place (the subject's OneDrive folder or the vault) and repoint the note.
 - **Claims written this session.** Each claim needs the source it was read from. If you saw it only in a search-result summary or recalled it from memory, mark it as unconfirmed.
 
-Why this step exists, with measured miss rates: [[Memory-System-Analysis-2026-10]].
+Why this step exists: stale hub/memory state was the most common close miss in the 2026-10 transcript sweep (unmeasured since).
 
 ### 5. Continuation prompt (CONDITIONAL)
 Offer it **only** if non-trivial work was left mid-flight — complex mental state (half-done debugging, decision in progress, long reasoning thread) that would be lost in a clean chat. If everything is closed and already in memory/vault, **don't** offer a prompt: it's noise.

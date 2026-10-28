@@ -18,7 +18,7 @@ powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/skills/sync/sync
 
 For each repo (`claude-config`, `claude-skills`, `SecondBrain`) the script:
 1. Commits if there are changes (`chore(sync): ...`).
-2. Pushes if there are commits ahead of upstream, with the `lurio84` token via `gh` (a plain push gets 404 on the private repos because GCM caches a different GitHub account).
+2. Pushes if there are commits ahead of upstream, with a plain `git push` pinned to username `lurio84`: the global `~/.gitconfig` routes github.com to `gh auth git-credential` (verified on the tower 2026-10-28). `hooks/setup-check.ps1` repairs that helper at session start if it's missing.
 
 ## Verify
 

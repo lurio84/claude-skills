@@ -8,7 +8,6 @@ Personal skills for Claude Code: repeatable procedures Claude runs when I invoke
 |---|---|
 | [`cerrar-chat`](./cerrar-chat/SKILL.md) | Session closing ritual: reviews what was done, saves what deserves it to the vault, updates memory, offers a continuation prompt if work was left mid-flight. |
 | [`grill-me`](./grill-me/SKILL.md) | Intensive interview about a plan or design: one question at a time down the decision tree, each with a recommendation. |
-| [`revisar-cryptotrader`](./revisar-cryptotrader/SKILL.md) | Weekly review of the CryptoTrader project: run status, triggered alerts, diagnosis and fixes for failures. |
 | [`revisar-uni`](./revisar-uni/SKILL.md) | On-demand sync of the current university term against the course platform (Blackboard) and course wiki; updates the vault calendar and hubs. |
 | [`revisar-vault`](./revisar-vault/SKILL.md) | Periodic review of the Obsidian vault: closes open threads from earlier audits, processes the Inbox. Output goes to `Yo/Revision-Vault.md` (a living note, not a new dated one). |
 | [`sync`](./sync/SKILL.md) | Manual commit + push of the three setup repos (claude-config, claude-skills, SecondBrain). |

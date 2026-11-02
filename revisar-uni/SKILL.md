@@ -46,9 +46,9 @@ EGC's EV course only links out — the real source is the wiki:
 - **InnoSoft-related theory sessions**: any wiki/Telegram/EV mention that a theory class is tied to InnoSoft (sessions marked "(Innosoft)" in the Planificación, attendance-hour rules, Evidentia) must always be called out in the report — Lucas wants to attend those. Cross-check against the InnoSoft table in the EGC hub and flag anything new or changed.
 - The wiki won't show up as a "dated announcement" for new undated material (e.g. a practice's enunciado going from "pendiente de publicar" to live). Cross-check the wiki's practice/document links against the EGC hub's table of practices/topics, not just a "what changed recently" prompt.
 
-### 4b. AC (date-only tracking)
+### 4b. AC (grade tracking only)
 
-Out of scope for content, but while the AC exam row in `Calendario-2026-27.md` has no confirmed hour/room, it needs watching. Check the announcements of **both** the previous-year AC course (the sitting belongs to it; earlier sitting notices were posted there) and the current-year one (included in the batched query of §3), each run until that's published, then this check can stop. Course ids are in the vault hub.
+Out of scope for content. The October sitting has been held; what's pending is the **grade** (it decides the compensación request, see the AC hub). Check the announcements of **both** the previous-year AC course (the sitting belongs to it; earlier sitting notices were posted there) and the current-year one (included in the batched query of §3) for a grade or provisional-results notice. Report it at the top of the report when it appears, then this check can stop: remove §4b and AC from §3. Course ids are in the vault hub.
 
 ### 5. Downloads
 

@@ -10,7 +10,7 @@ Personal skills for Claude Code: repeatable procedures Claude runs when I invoke
 | [`grill-me`](./grill-me/SKILL.md) | Intensive interview about a plan or design: one question at a time down the decision tree, each with a recommendation. |
 | [`revisar-uni`](./revisar-uni/SKILL.md) | On-demand sync of the current university term against the course platform (Blackboard) and course wiki; updates the vault calendar and hubs. |
 | [`revisar-vault`](./revisar-vault/SKILL.md) | Periodic review of the Obsidian vault: closes open threads from earlier audits, processes the Inbox. Output goes to `Yo/Revision-Vault.md` (a living note, not a new dated one). |
-| [`sync`](./sync/SKILL.md) | Manual commit + push of the three setup repos (claude-config, claude-skills, SecondBrain). |
+| `sync/sync.ps1` | Script (not a skill since 2026-11-03) that `/cerrar-chat` runs: commit + push of the three setup repos, with a secret guard and one rebase retry. |
 | [`task-progress`](./task-progress/) | Claude Code mod (plugin folder, no SKILL.md): a progress bar above the prompt for each background Bash/PowerShell task (reads `PROGRESS n/m`, tqdm or `NN%` from its output), a `/logs` pane with the live log, and a toast when it ends. |
 
 Not versioned here (local only):

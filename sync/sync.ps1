@@ -85,7 +85,19 @@ foreach ($r in $repos) {
     $ahead = & git -C $r.Path rev-list --count '@{u}..HEAD' 2>$null
     if ($LASTEXITCODE -eq 0 -and $ahead -and [int]$ahead -gt 0) {
         & git -C $r.Path -c credential.https://github.com.username=lurio84 push --quiet origin HEAD 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
+        $pushOk = ($LASTEXITCODE -eq 0)
+        if (-not $pushOk) {
+            # Rejected (the other machine pushed first): rebase onto upstream once, abort cleanly if it conflicts (audit F16).
+            & git -C $r.Path -c credential.https://github.com.username=lurio84 pull --rebase --quiet 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                & git -C $r.Path -c credential.https://github.com.username=lurio84 push --quiet origin HEAD 2>&1 | Out-Null
+                $pushOk = ($LASTEXITCODE -eq 0)
+            } else {
+                & git -C $r.Path rebase --abort 2>&1 | Out-Null
+                Log "$($r.Name): pull --rebase failed, aborted"
+            }
+        }
+        if ($pushOk) {
             $sha = & git -C $r.Path rev-parse --short HEAD 2>$null
             $results += "$($r.Name): pushed $ahead commit(s) (HEAD $sha)"
             Log "$($r.Name): pushed $ahead -> $sha"

@@ -1,4 +1,4 @@
-# Skill `sync` -- commit + push manual de los 3 repos del setup (claude-config,
+﻿# Skill `sync` -- commit + push manual de los 3 repos del setup (claude-config,
 # claude-skills, SecondBrain). Sustituye al hook SessionEnd (que solo commiteaba y
 # disparaba "Hook cancelled"). Se invoca a mano via /sync o como paso final de /cerrar-chat.
 # Commit: logica de sync-push.ps1. Push: plain git; the global ~/.gitconfig routes github.com
@@ -23,7 +23,7 @@ $repos = @(
 
 # Patron de posibles secretos: solo se mira lo AÑADIDO (diff -U0), no el archivo entero,
 # para no disparar con cosas como "sk-close-state" o "sk-management" (vocabulario del vault).
-$secretPattern = 'sk-(cp-)?[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[bp]-[0-9A-Za-z-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY'
+$secretPattern = 'sk-(cp-)?[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[bp]-[0-9A-Za-z-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY|org_[A-Za-z0-9_-]{40,}'
 
 $timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm')
 # Both machines are named LURIO84; tag by chassis type instead (2 = mobile).

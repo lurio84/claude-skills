@@ -31,17 +31,9 @@ Only if an active project changed state or new feedback came up. Edit the existi
 - A new memory goes to the hot index only if it passes the split rule at the top of `MEMORY.md`. Domain-gated references go to `MEMORY-archivo.md`.
 
 ### 4. Wikilink check (notes touched today)
-Identify the vault `.md` notes modified this session: the ones in your own Edit/Write calls, plus whatever this shows (a sync earlier in the session may already have committed some, so git status alone misses them):
+Run `python -I ~/.claude/tools/refcheck.py --vault --changed`. It checks the vault notes uncommitted or committed today for broken wikilinks and broken YAML frontmatter (memory links, path links, attachments and code are already handled). Fix what it reports. If you edited a note this session that it didn't list, check that one too.
 
-```powershell
-git -C C:\Users\lucas\SecondBrain status --porcelain -- "*.md"
-```
-
-For only those notes (auditing the rest is `/revisar-vault`'s job):
-- **Real broken wikilinks** → fix them. **Exclude** `[[feedback_*]]`, `[[project_*]]`, `[[reference_*]]`, `[[user_*]]`: they point to memory, are intentional, NOT broken (same rule as `revisar-vault`).
-- **Obvious unlinked connection**: if the note literally mentions the exact title of another existing vault note, wrap it in `[[]]` — body only, never in frontmatter or code blocks.
-
-If no notes were touched, or there's nothing to fix, say so in one line and move on. Don't invent work or audit notes not touched today.
+Then one judgment pass on those notes only: if a note literally mentions the exact title of another existing vault note, wrap it in `[[]]` (body only, never frontmatter or code blocks). Nothing to fix → one line, move on.
 
 ### 4b. Re-read pass (what the advisor used to catch)
 Lucas doesn't want to call the advisor on every close, so do this pass yourself. Don't call the advisor at closing unless the session shipped code, a deploy, a publish or a financial action no advisor call has reviewed yet, or Lucas asks for it. Re-read the files from disk; don't rely on what you remember writing. Scope: every file you edited this session according to your own Edit/Write calls, not only what `git status` shows, because a sync earlier in the session already committed some of them. Add the hub of every topic whose state changed this session, even if you didn't edit that hub.

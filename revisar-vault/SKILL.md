@@ -59,7 +59,7 @@ Output: table `project | last note | age | flag`.
 ### Phase 3 — Memory audit (error propagation)
 
 1. **Reference + index integrity** (script, no LLM): `python -I ~/.claude/tools/refcheck.py`. It scans both CLAUDE.md files, `~/.claude/README.md`, all memories, skills and hooks for broken wikilinks, memory names, paths and `/commands`, plus index pointers to missing files, unindexed memories and double-indexed ones. Fix real breaks (some hits are false positives: example paths, intentional historical mentions). Also grep both CLAUDE.md files for hardcoded counts. Reason it exists: setup audits (2026-09-07, 09-24, 10-28) kept finding the same docs-vs-files drift; this makes the check mechanical.
-2. **Content check**, for every `project_*` and `feedback_*` memory (read them yourself — they're small; no subagent):
+2. **Content check**, triaged (audit F10, 2026-11-03): read only the `project_*`/`feedback_*` memories modified since the last review in `Yo/Revision-Vault.md`, plus those whose index line carries a date >3 months old or that `refcheck.py`/`health.py` flagged. Skip the rest and say how many were skipped:
    - **Still true?** Project state vs vault notes / repo / `git log`; feedback vs CLAUDE.md and other memories (contradictions).
    - **Sourced?** Factual claims (prices, states, numbers, tool behavior) carry source + date. Unsourced → verify now, mark as intuition, or drop.
    - **Expired?** Classify each claim: Lucas's standing instruction (never expires) / external-world evaluation (model, price, tool, stack, "X doesn't work", "descartado" — flag if >3 months old) / situational state (project, goals, deadlines — flag if stale vs repo/EV). An evaluation without attribution is mine, not Lucas's — don't let it pose as a veto.
@@ -71,42 +71,12 @@ Output: table `project | last note | age | flag`.
 
 1. Empty notes or <200 bytes → list (no automatic action).
 2. Notes >5KB without YAML frontmatter → list, propose minimal frontmatter in Phase 5.
-   **Broken frontmatter** (script): `python -I ~/.claude/skills/revisar-vault/yamlcheck.py` plus `claude plugin validate ~/.claude/skills` (skill frontmatter). Quote the offending value directly (mechanical, like broken-pointer typos — no approval needed). Causes seen 2026-10-28: unquoted wikilink lists and `: ` inside an unquoted value.
-3. Real broken wikilinks — exclude the intentional ones to memory: `[[feedback_*]]`, `[[project_*]]`, `[[reference_*]]`, `[[user_*]]` are NOT broken.
+   **Broken frontmatter** (script): the `BROKEN frontmatter` block of `python -I ~/.claude/tools/refcheck.py --vault` plus `claude plugin validate ~/.claude/skills` (skill frontmatter). Quote the offending value directly (mechanical, like broken-pointer typos — no approval needed). Causes seen 2026-10-28: unquoted wikilink lists and `: ` inside an unquoted value.
+3. Real broken wikilinks: the `BROKEN wikilink` block of `refcheck.py --vault` (it already resolves memory links, path links and attachments, and ignores code).
 4. **Index notes disconnected from their domain hub**: a `*-Indice.md` / `INDEX-*.md` in a subfolder that the domain's parent index doesn't list → propose a bidirectional link.
 5. **Intra-domain orphans**: in a folder with an identifiable hub, every sibling note should be linked from the hub or from a sibling. Don't touch legitimately standalone notes.
 6. **Never archive real orphans.** Only propose links; never delete/move.
-7. **BFS of connected components** (run after applying fixes 1-5) to tell Obsidian's visual clouds from real disconnection:
-
-   ```powershell
-   $root = "C:\Users\lucas\SecondBrain"
-   $notes = Get-ChildItem -Path $root -Recurse -Filter *.md -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\\.obsidian\\' -and $_.FullName -notmatch '\\Colab Notebooks\\' }
-   $nameToFile = @{}
-   foreach ($n in $notes) { $bn = [System.IO.Path]::GetFileNameWithoutExtension($n.Name); if (-not $nameToFile.ContainsKey($bn)) { $nameToFile[$bn] = $n.FullName } }
-   $adj = @{}
-   foreach ($bn in $nameToFile.Keys) { $adj[$bn] = New-Object System.Collections.Generic.HashSet[string] }
-   foreach ($n in $notes) {
-     $bn = [System.IO.Path]::GetFileNameWithoutExtension($n.Name)
-     # -Encoding UTF8 is mandatory: PS 5.1 reads ANSI by default and corrupts
-     # accents/ñ in wikilinks -> false broken links and false islands.
-     $content = Get-Content $n.FullName -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
-     if (-not $content) { continue }
-     $regexMatches = [regex]::Matches($content, '\[\[([^\]\|#]+)')
-     foreach ($m in $regexMatches) {
-       $target = ($m.Groups[1].Value -split '\|')[0].Trim()
-       $target = ($target -split '/')[-1]   # path links ([[_archivo/Note]]) resolve by name
-       if ($nameToFile.ContainsKey($target) -and $target -ne $bn) { [void]$adj[$bn].Add($target); [void]$adj[$target].Add($bn) }
-     }
-   }
-   $visited = @{}; $components = New-Object System.Collections.ArrayList
-   foreach ($bn in ($nameToFile.Keys | Sort-Object)) {
-     if ($visited.ContainsKey($bn)) { continue }
-     $comp = New-Object System.Collections.ArrayList; $queue = New-Object System.Collections.Queue
-     $queue.Enqueue($bn); $visited[$bn] = $true
-     while ($queue.Count -gt 0) { $cur = $queue.Dequeue(); [void]$comp.Add($cur); foreach ($next in $adj[$cur]) { if (-not $visited.ContainsKey($next)) { $visited[$next] = $true; $queue.Enqueue($next) } } }
-     [void]$components.Add($comp)
-   }
-   ```
+7. **Connected components** (script, after applying fixes 1-5): the `COMPONENTS` block of `python -I ~/.claude/tools/refcheck.py --vault` lists the islands (>=2 notes) and the isolated-note count, to tell Obsidian's visual clouds from real disconnection.
 
    For each component with ≥2 nodes that isn't the main one: **legitimate island** (one-off event, config, checkpoint) vs **island to connect** (a cluster that will grow). In the main component, flag nodes whose only bridge is `Revision-Vault.md` or another meta note — those bridges are accidental (they vanish when the meta note is rewritten); propose a link from a real content hub.
 

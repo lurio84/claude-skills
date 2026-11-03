@@ -27,12 +27,12 @@ Call `browser_tabs` only if a navigate/evaluate fails, not as a routine check. N
 
 Read `ev_last_sync` from `Calendario-2026-27.md` frontmatter (Read the frontmatter with a small `limit`, not the whole file) — compare against it as a **full ISO datetime in UTC** (Blackboard timestamps are UTC; a date-only value either misses or double-reports same-day items). **Capture the new sync timestamp now, at the start of the run** (`date -u`), not at the end — using the end time risks skipping anything posted while the run itself was in progress. Write this captured value in step 6.
 
-### 3. One batched EV query (PSM, PGPI, EGC-on-EV, AC)
+### 3. One batched EV query (PSM, PGPI, EGC-on-EV, watch courses)
 
-Before the batched evaluate, navigate the tab to any `/learn/api/public/v1/...` URL (in-page fetch fails with "Failed to fetch" on the `/ultra` SPA). Then do all EV reads in a **single `browser_evaluate`** (absolute URLs under `https://ev.us.es/learn/api/public/v1/...`). The in-page async function takes `ev_last_sync` and the AC course ids (from the vault hub) and:
+Before the batched evaluate, navigate the tab to any `/learn/api/public/v1/...` URL (in-page fetch fails with "Failed to fetch" on the `/ultra` SPA). Then do all EV reads in a **single `browser_evaluate`** (absolute URLs under `https://ev.us.es/learn/api/public/v1/...`). The in-page async function takes `ev_last_sync` and the watch-course ids (§4b) and:
 1. Fetches `users/me/courses?expand=course&limit=100`. On 401/403 (or if the tab sits on the EV splash page or `sso.us.es`) it returns `{auth:false}` → **stop and ask Lucas to log in manually (2FA)**, then rerun this same call once. Don't guess a workaround.
 2. Resolves the three current-term courses by name prefix `202627-` and course name (PSM = "Procesamiento de Señales Multimedia", EGC = "Evolución y Gestión de la Configuración", PGPI = "Planificación y Gestión de Proyectos Informáticos"). Read the target year from `Curso-2026-27.md` so the skill keeps working next year.
-3. Fetches announcements for PSM, PGPI, EGC and the AC courses (§4b), and `contents?recursive=true&limit=200` for PSM and PGPI, following `paging.nextPage`.
+3. Fetches announcements for PSM, PGPI, EGC and the watch courses (§4b), and `contents?recursive=true&limit=200` for PSM and PGPI, following `paging.nextPage`.
 4. Filters in the page to items with `created`/`modified` after `ev_last_sync` and **returns only a compact list**: `{course, kind, id, parentId, title, created, modified, attachments:[{id, fileName}]}` (announcements: title + created + first ~300 chars of body text). No raw JSON in the conversation, no scratchpad dumps.
 
 **Watch for stale course-shell dates**: some items carry timestamps from a prior year's copied course shell — sanity-check against the current term before treating something as "new".
@@ -46,9 +46,9 @@ EGC's EV course only links out — the real source is the wiki:
 - **InnoSoft-related theory sessions**: any wiki/Telegram/EV mention that a theory class is tied to InnoSoft (sessions marked "(Innosoft)" in the Planificación, attendance-hour rules, Evidentia) must always be called out in the report — Lucas wants to attend those. Cross-check against the InnoSoft table in the EGC hub and flag anything new or changed.
 - The wiki won't show up as a "dated announcement" for new undated material (e.g. a practice's enunciado going from "pendiente de publicar" to live). Cross-check the wiki's practice/document links against the EGC hub's table of practices/topics, not just a "what changed recently" prompt.
 
-### 4b. AC (grade tracking only)
+### 4b. Watch courses (announcements only)
 
-Out of scope for content. The October sitting has been held; what's pending is the **grade** (it decides the compensación request, see the AC hub). Check the announcements of **both** the previous-year AC course (the sitting belongs to it; earlier sitting notices were posted there) and the current-year one (included in the batched query of §3) for a grade or provisional-results notice. Report it at the top of the report when it appears, then this check can stop: remove §4b and AC from §3. Course ids are in the vault hub.
+The term hub's "Cómo mantenerlo al día" section may list extra EV courses to watch, each with what to look for. Include their announcements in the §3 batch; when a matching notice appears, report it at the top of the report. Out of scope for content. When the hub says a watch is resolved, drop it from the hub, not from this skill.
 
 ### 5. Downloads
 

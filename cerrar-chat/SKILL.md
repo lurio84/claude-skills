@@ -50,7 +50,7 @@ Offer it **only** if non-trivial work was left mid-flight — complex mental sta
 As the final step, persist to remote by running the sync script (there's no automatic hook doing it anymore):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/skills/sync/sync.ps1
+powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/hooks/sync.ps1
 ```
 
 Show the result per repo. If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas (probably `gh` not logged in as `lurio84`). Don't close declaring success if any repo didn't reach `pushed` / `up to date`.

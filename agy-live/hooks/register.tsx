@@ -189,6 +189,31 @@ function currentMode(all: string[]): Mode {
   return wait
 }
 
+// A log line "[tool] read_file C:\a\b.pdf" as Claude would word it: "Reading b.pdf". Lucas, 2026-11-05: wants to see
+// what agy is doing during long runs; agy's stream has no thinking text, so tools are all there is to show.
+function describe(line: string): string {
+  const m = /^\[tool\] (\S+)\s*(.*)$/.exec(line)
+  if (!m) return line
+  const tool = m[1] ?? ''
+  const arg = m[2] ?? ''
+  const file = arg.replace(/^"|"$/g, '').split(/[\\/]/).pop() ?? arg
+  if (tool === 'read_file') return `Reading ${file}`
+  if (tool === 'write_file' || tool.startsWith('edit') || tool.startsWith('replace')) return `Editing ${file}`
+  if (tool === 'run_command') return `Running ${arg}`
+  if (tool === 'search_web') return `Searching the web: ${arg}`
+  if (tool.includes('grep') || tool.includes('search')) return `Searching ${arg}`
+  if (tool.includes('list')) return `Listing ${file}`
+  if (tool === 'invoke_subagent') return `Starting subagent ${arg}`
+  return `${tool} ${arg}`.trim()
+}
+
+function activity(all: string[], current: Mode): string | null {
+  if (current === 'responding') return 'Writing the answer…'
+  const last = [...all].reverse().find(l => l.startsWith('[tool] '))
+  if (!last) return null
+  return current === 'tool' ? describe(last) : `${describe(last)} · done`
+}
+
 function ease(current: number, target: number): number {
   const next = current + (target - current) * 0.1
   return Math.abs(target - next) < 0.01 ? target : next
@@ -291,6 +316,7 @@ export const register: Register = on => {
       )
     }
 
+    const step = activity(thisRun(all), mode)
     await read($, frame)   // subscribes the band to the 50 ms tick
     const nowMs = await $.clock.now()
     const t = nowMs - runStart
@@ -347,6 +373,7 @@ export const register: Register = on => {
           {label}
           {suffix}
         </Text>
+        {step && <Text dimColor wrap="truncate-end">  ⎿  {step}</Text>}
       </Box>
     )
   })

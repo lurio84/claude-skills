@@ -72,7 +72,12 @@ async function load($: EngineInterface): Promise<string> {
 }
 
 async function watch($: EngineInterface): Promise<void> {
-  const before = (await load($)).replace(/^﻿/, '').split(/\r?\n/)[0]
+  // A later command that only mentions delegar.ps1 (a grep, a cat) must not reset a band that is already running.
+  if ((await read($, phase)) === 'running') return
+  const current = (await load($)).replace(/^﻿/, '')
+  // A log with a header but no footer is a run already in progress: attach to it instead of waiting for a new one.
+  const inProgress = current.startsWith('=====') && !/\n----- /.test(current)
+  const before = inProgress ? undefined : current.split(/\r?\n/)[0]
   previousHeader = before
   const startedAt = await $.clock.now()
   tick?.cancel()
@@ -276,7 +281,7 @@ export const register: Register = on => {
       // Like Claude's dim "✻ Crunched for 1m 12s" line (past verb from its list); red only when something needs a look.
       return ok ? (
         <Box marginTop={1}>
-          <Text dimColor>✻ Antigravity · {pastVerb} for {duration(secs)}</Text>
+          <Text color={BLUE} dimColor>✻ {pastVerb} for {duration(secs)}</Text>
         </Box>
       ) : (
         <Box marginTop={1}>
@@ -299,7 +304,7 @@ export const register: Register = on => {
     const tinted = tint ? (tint.x > 0.5 ? tint.full : mix(BLUE, tint.to, q8(tint.x))) : null
     const bold = thinkingEased >= 0.5
 
-    const message = `Antigravity · ${verb}…`
+    const message = `${verb}…`
     let label
     if (tinted) label = <Text color={tinted}>{message}</Text>
     else if (mode === 'tool') {

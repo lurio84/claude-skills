@@ -113,15 +113,24 @@ const cut = (s: string, n: number) => (s.length > n ? s.slice(0, Math.max(0, n -
 /**
  * Where a task's output really is. The guess built from `$.session.id()` misses after a `/clear` (the output keeps
  * going to another session folder), so look for `tasks\<id>.output` in every session folder of this project.
+ * The project folder used to be the cwd with :\/ as dashes; newer builds (seen 2026-11-05, 2.1.318) use a hash,
+ * so also take any folder under %TEMP%\claude that holds this session's folder.
  */
 async function locate($: EngineInterface, t: Task) {
   if (t.path !== null && (await $.fs.exists(t.path))) return t.path
   const temp = await $.env.get('TEMP')
   if (!temp) return null
-  const project = `${temp}\\claude\\${(await $.session.cwd()).replace(/[:\\/]/g, '-')}`
-  for (const session of await $.fs.list(project).catch(() => [])) {
-    const p = `${project}\\${session.name}\\tasks\\${t.id}.output`
-    if (session.kind === 'dir' && (await $.fs.exists(p))) return p
+  const root = `${temp}\\claude`
+  const sessionId = await $.session.id()
+  const projects = [`${root}\\${(await $.session.cwd()).replace(/[:\\/]/g, '-')}`]
+  for (const top of await $.fs.list(root).catch(() => [])) {
+    if (top.kind === 'dir' && (await $.fs.exists(`${root}\\${top.name}\\${sessionId}`))) projects.push(`${root}\\${top.name}`)
+  }
+  for (const project of projects) {
+    for (const session of await $.fs.list(project).catch(() => [])) {
+      const p = `${project}\\${session.name}\\tasks\\${t.id}.output`
+      if (session.kind === 'dir' && (await $.fs.exists(p))) return p
+    }
   }
   return null
 }

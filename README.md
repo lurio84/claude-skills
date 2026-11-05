@@ -6,6 +6,7 @@ Personal skills for Claude Code: repeatable procedures Claude runs when I invoke
 
 | Skill | What it does |
 |---|---|
+| [`agy-live`](./agy-live/) | Claude Code mod (plugin folder, no SKILL.md): while Claude delegates to Antigravity CLI through `delegar`, a Claude-style status line above the prompt (verb, elapsed time, generated tokens, current tool/file) and an `/agy` pane with the full log of the last run. |
 | [`cerrar-chat`](./cerrar-chat/SKILL.md) | Session closing ritual: reviews what was done, saves what deserves it to the vault, updates memory, offers a continuation prompt if work was left mid-flight. |
 | [`grill-me`](./grill-me/SKILL.md) | Intensive interview about a plan or design: one question at a time down the decision tree, each with a recommendation. |
 | [`revisar-uni`](./revisar-uni/SKILL.md) | On-demand sync of the current university term against the course platform (Blackboard) and course wiki; updates the vault calendar and hubs. |

@@ -1,0 +1,1 @@
+{ "name": "agy-live", "version": "0.1.0", "description": "Pane that shows live what Antigravity (agy) does when Claude delegates via delegar.ps1", "types": "./types/index.d.ts" }

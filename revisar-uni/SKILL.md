@@ -37,6 +37,14 @@ Before the batched evaluate, navigate the tab to any `/learn/api/public/v1/...` 
 
 **Watch for stale course-shell dates**: some items carry timestamps from a prior year's copied course shell — sanity-check against the current term before treating something as "new".
 
+### 3b. Course messages (university email)
+
+Professors' EV course **messages** don't appear in the announcements or contents APIs of §3; they reach Lucas only by email (found 2026-11-06, when a notice about a class exercise was in Outlook and not in the EV API). So always check the inbox too:
+1. Open `https://outlook.office.com/mail/` in a new tab of the same Chrome. If it asks for a login (US 2FA), stop and ask Lucas, as in §1.
+2. With one `browser_evaluate`, read the rows of the message list (`[data-convid]`, `aria-label` or `innerText`, about 190 characters each). Keep the ones newer than `ev_last_sync` whose text names a current-term or watch course ("le ha enviado un nuevo mensaje en …", or "Anuncio nuevo"). Scroll the list if the oldest loaded row is still newer than `ev_last_sync`.
+3. Open only those rows, since opening marks a message as read, and read the body. Announcements found here should already be in §3; anything else is new and goes through §6 like any other item. Cite "Outlook" as the source and the date read.
+4. Close the tab. If the inbox can't be read, say so in the report and treat course messages as unchecked: don't report that subject as "sin cambios".
+
 ### 4. EGC (wiki-native)
 
 EGC's EV course only links out — the real source is the wiki:

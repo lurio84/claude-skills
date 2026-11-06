@@ -6,7 +6,7 @@ import { PAST_VERBS, VERBS } from './verbs'
 
 // Shows what Antigravity (agy) is doing while Claude delegates via delegar.ps1:
 // a Claude-style status above the prompt during the run, and the full log in a pane on /agy.
-// Source: ~/.claude/tools/delegar-live.log, rewritten by delegar.ps1 on every run.
+// Source: ~/.claude/tools/live/<session id>.log, rewritten by delegar.ps1 on every run of this session.
 const PANE = 'agy-live'
 const TITLE = 'agy (Antigravity)'
 const lines = atom({ plugin: 'agy-live', key: 'lines' } as const, [], { shape: 'lines-1' })
@@ -63,7 +63,7 @@ async function load($: EngineInterface): Promise<string> {
   const home = (await $.env.get('USERPROFILE')) ?? ''
   let text = ''
   try {
-    text = String(await $.fs.read(`${home}\\.claude\\tools\\delegar-live.log`))
+    text = String(await $.fs.read(`${home}\\.claude\\tools\\live\\${await $.session.id()}.log`))
   } catch {
     return ''
   }

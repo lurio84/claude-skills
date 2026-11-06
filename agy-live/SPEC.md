@@ -47,3 +47,7 @@ Previous notes:
 - Claude's recommendation: add a `-Web` switch that uses a second settings file with `enableTerminalSandbox: false`, only for research runs on an empty `-Dir`. Keep the sandbox for everything else. Reason: the git-check covers vault/.claude/skills but not OneDrive, which holds the synced PGPI Teams folder shared with teammates.
 - Lucas confirms in the next chat.
 
+
+## Per-session live log (2026-11-06)
+
+Two chats overwrote each other's `delegar-live.log`, and one run's footer stopped the other chat's band. `delegar.ps1` now writes `tools/live/$env:CLAUDE_CODE_SESSION_ID.log` (shared log only when the variable is missing) and deletes logs older than 7 days. The mod reads `tools/live/<$.session.id()>.log`. Verified: the two ids matched in one session, a tiny run wrote its own log and left the shared one alone, and the band showed a `-Full` run after a foreground re-attach (seen by Lucas). Untested: two concurrent runs with this code, each with its own band; and `/clear` or resume, where the types say the session id changes and the env var may not.

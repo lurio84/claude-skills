@@ -12,6 +12,10 @@ const viewing = atom({ plugin: 'task-progress', key: 'viewing' } as const, null)
 
 const KILLED = 143 // a stopped task's file ends in `[killed]`, no code: shown as SIGTERM's
 const ANSI =/\x1b\[[0-9;?]*[A-Za-z]/g
+export const BLIND_PIPE = /\|\s*(tail|head|grep|sort|uniq|Select-Object\s+-(First|Last)|Select-String)\b/i
+const BLIND_PIPE_NOTE = 'task-progress: this background command pipes its output through a filter (tail/head/grep/Select-*), ' +
+  'so nothing reaches the output file until it ends and the progress bar stays blind. If the job is long, stop it and relaunch ' +
+  'without the pipe (filter when reading the file); scripts should print flushed `PROGRESS cur/total note` lines.'
 
 /** Progress from a task's output: an explicit `PROGRESS cur/total note` line wins, else tqdm / `N/M` / `NN%` on the last line. */
 export function parse(text: string) {
@@ -203,6 +207,10 @@ export const register: Register = on => {
     }
     await update($, tasks, all => [...all.filter(t => t.id !== id), task].slice(-20))
 
+    // A filter pipe holds the job's lines back until it ends, so the bar stays blind (memory feedback_progress_mod_convention).
+    if (ran.deny === undefined && BLIND_PIPE.test(e.command)) {
+      return { ...ran, context: [...(ran.context ?? []), BLIND_PIPE_NOTE] }
+    }
     return ran
   }).catch(($, e, next) => next(e)) // tracking must never block a Bash call
 

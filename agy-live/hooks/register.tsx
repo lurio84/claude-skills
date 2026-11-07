@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Phase } from '../types'
+import type { Phase, SideRun } from '../types'
 import { PAST_VERBS, VERBS } from './verbs'
 
 // Shows what Antigravity (agy) is doing while Claude delegates via delegar.ps1:
@@ -14,6 +14,7 @@ const phase = atom({ plugin: 'agy-live', key: 'phase' } as const, 'idle' as Phas
 const elapsed = atom({ plugin: 'agy-live', key: 'elapsed' } as const, 0)
 const frame = atom({ plugin: 'agy-live', key: 'frame' } as const, 0)
 const shownTokens = atom({ plugin: 'agy-live', key: 'shownTokens' } as const, 0)
+const side = atom({ plugin: 'agy-live', key: 'side' } as const, [] as SideRun[])
 
 // Behaviour copied from Claude's spinner: constants and formulas read from the bundled JS of claude.exe
 // (installed 2026-11-04, re-read 2026-11-05; see ../SPEC.md). Only the colour differs: blue, so the band can't be
@@ -153,8 +154,49 @@ async function settle($: EngineInterface): Promise<void> {
   else if (/\n----- /.test(text)) await stop($, 'done')
 }
 
+// The main band follows untagged runs only; a run with -Tag writes <session id>-<tag>.log and gets a side line.
 function isDelegar(cmd: unknown): boolean {
-  return typeof cmd === 'string' && cmd.includes('delegar.ps1')
+  return typeof cmd === 'string' && cmd.includes('delegar.ps1') && !isTagged(cmd)
+}
+
+function isTagged(cmd: unknown): boolean {
+  return typeof cmd === 'string' && cmd.includes('delegar.ps1') && /\s-Tag\s/i.test(cmd)
+}
+
+// Side lines: one per tagged run of this session still in progress (header, no footer), polled every second
+// from the first tagged call until none is left. Since 2026-11-07 (parallel runs from one chat).
+let sidePoll: { cancel: () => void } | undefined
+let sideSince = 0
+
+async function pollSide($: EngineInterface): Promise<void> {
+  const home = (await $.env.get('USERPROFILE')) ?? ''
+  const dir = `${home}\\.claude\\tools\\live`
+  const prefix = `${await $.session.id()}-`
+  const now = await $.clock.now()
+  const rows: SideRun[] = []
+  let entries: { name: string; kind: string; mtimeMs: number }[] = []
+  try { entries = await $.fs.list(dir) } catch { entries = [] }
+  for (const f of entries) {
+    if (f.kind !== 'file' || !f.name.startsWith(prefix) || !f.name.endsWith('.log') || now - f.mtimeMs > 2 * 3600_000) continue
+    let text = ''
+    try { text = String(await $.fs.read(`${dir}\\${f.name}`)).replace(/^﻿/, '') } catch { continue }
+    if (!text.startsWith('=====') || /\n----- /.test(text)) continue
+    const all = text.split(/\r?\n/)
+    const started = Date.parse((/^===== (\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)/.exec(all[0] ?? '') ?? []).slice(1, 3).join('T'))
+    rows.push({
+      tag: f.name.slice(prefix.length, -4),
+      secs: Number.isNaN(started) ? 0 : Math.max(0, Math.round((now - started) / 1000)),
+      step: activity(all, currentMode(all)),
+    })
+  }
+  await update($, side, () => rows)
+  // Stop once nothing is running, but give a just-launched run 20 s to write its header.
+  if (rows.length === 0 && now - sideSince > 20_000) { sidePoll?.cancel(); sidePoll = undefined }
+}
+
+async function startSide($: EngineInterface): Promise<void> {
+  sideSince = await $.clock.now()
+  if (!sidePoll) sidePoll = $.clock.every(1000, () => pollSide($))
 }
 
 // Linear blend of two #RRGGBB colours, t in [0, 1].
@@ -207,8 +249,21 @@ function describe(line: string): string {
   return `${tool} ${arg}`.trim()
 }
 
+// What Gemini is saying between tools ("Now I'll check the transcript…"), shown instead of a generic line. agy 1.5.3
+// still streams no thinking text (raw stream checked 2026-11-07), so this narration is the only text there is.
+// The final answer (JSON, code, tables) keeps the generic label.
+export function narration(all: string[]): string | null {
+  for (let i = all.length - 1; i >= 0; i--) {
+    const l = (all[i] ?? '').trim()
+    if (l === '') continue
+    if (l.startsWith('[') || l.startsWith('=====') || l.startsWith('-----')) return null
+    return /^[{}\[\]"|`<#]/.test(l) || /[{}]\s*,?$/.test(l) ? null : l
+  }
+  return null
+}
+
 function activity(all: string[], current: Mode): string | null {
-  if (current === 'responding') return 'Writing the answer…'
+  if (current === 'responding') return narration(all) ?? 'Writing the answer…'
   const last = [...all].reverse().find(l => l.startsWith('[tool] '))
   if (!last) return null
   return current === 'tool' ? describe(last) : `${describe(last)} · done`
@@ -262,6 +317,8 @@ export const register: Register = on => {
     await $.command.register({ name: 'agy', description: 'Show the full log of the last agy delegation' })
     // Timers don't survive a reload or restart; a run left "running" would count forever.
     if ((await read($, phase)) === 'running') await update($, phase, () => 'idle' as Phase)
+    // Same for tagged side lines: $.state keeps them, but the poll that clears them died with the old module.
+    await update($, side, () => [])
     return next(e)
   })
 
@@ -277,6 +334,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'PowerShell' }, async ($, e, next) => {
+    if (isTagged(e.command)) await startSide($)
     if (!isDelegar(e.command)) return next(e)
     await watch($)
     const ran = await next(e)
@@ -285,6 +343,7 @@ export const register: Register = on => {
   })
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    if (isTagged(e.command)) await startSide($)
     if (!isDelegar(e.command)) return next(e)
     await watch($)
     const ran = await next(e)
@@ -294,9 +353,17 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const now = await read($, phase)
-    if (e.props.hasSurvey || now === 'idle') return next(e)
+    const sideRuns = await read($, side)
+    if (e.props.hasSurvey || (now === 'idle' && sideRuns.length === 0)) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)
+    // Tagged parallel runs: one dim line each, under the main band (or alone when no untagged run is shown).
+    const sideTree = sideRuns.map(r => (
+      <Text color={BLUE} dimColor wrap="truncate-end">  ✦ {r.tag} · {duration(r.secs)}{r.step ? ` · ${r.step}` : ''}</Text>
+    ))
+    const withSide = (main: any) => sideTree.length === 0 ? main : <Box flexDirection="column">{main}{sideTree}</Box>
+    if (now === 'idle') return <Box flexDirection="column" marginTop={1}>{sideTree}</Box>
+
     const all = await read($, lines)
     const secs = await read($, elapsed)
 
@@ -304,7 +371,7 @@ export const register: Register = on => {
       const footer = all.find(l => l.startsWith('-----')) ?? ''
       const ok = footer.includes('SUCCESS') && footer.includes('git changed False')
       // Like Claude's dim "✻ Crunched for 1m 12s" line (past verb from its list); red only when something needs a look.
-      return ok ? (
+      return withSide(ok ? (
         <Box marginTop={1}>
           <Text color={BLUE} dimColor>✻ {pastVerb} for {duration(secs)}</Text>
         </Box>
@@ -313,7 +380,7 @@ export const register: Register = on => {
           <Text color="#EA4335">✘ Antigravity needs a look </Text>
           <Text dimColor>({footer.replace(/^-+\s*/, '')})</Text>
         </Box>
-      )
+      ))
     }
 
     const step = activity(thisRun(all), mode)
@@ -366,7 +433,7 @@ export const register: Register = on => {
         <Text dimColor>)</Text>
       </Text>
     )
-    return (
+    return withSide(
       <Box flexDirection="column" marginTop={1}>
         <Text>
           <Text color={tinted ?? BLUE} bold={bold}>{glyphAt(t)} </Text>

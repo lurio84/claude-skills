@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { parse } from './register'
+import { BLIND_PIPE, parse } from './register'
 
 test('an explicit PROGRESS line wins over the last line', async () => {
   const p = parse('loading\nPROGRESS 5/18 mago_ref_side\nsome other line 3/4\n')
@@ -27,4 +27,11 @@ test('a bare percentage and the exit marker', async () => {
   expect(p.frac).toBe(0.375)
   expect(p.exitCode).toBe(1)
   expect(p.note).toBe('downloading 37.5% done')
+})
+
+test("BLIND_PIPE flags filter pipes that hide a background job output", async () => {
+  expect(BLIND_PIPE.test('python x.py 2>&1 | grep -vi warn | tail -3')).toBe(true)
+  expect(BLIND_PIPE.test('Get-Content log | Select-Object -Last 5')).toBe(true)
+  expect(BLIND_PIPE.test('python transcribe.py a.wav out.txt')).toBe(false)
+  expect(BLIND_PIPE.test('& delegar.ps1 -Dir x | Out-File -Encoding utf8 out.txt')).toBe(false)
 })

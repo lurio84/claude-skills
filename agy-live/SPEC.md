@@ -58,3 +58,11 @@ Two chats overwrote each other's `delegar-live.log`, and one run's footer stoppe
 - Each band showing its own tokens: not confirmed by Lucas.
 - Untested: resume.
 - Oddity: `ping -n 45` ran through agy's `run_command`, and the whole run took 12 s. Unexplained. Use file reads, not ping, for a long test run.
+
+## 2026-11-07 — tagged parallel runs, Gemini narration, thinking re-check
+- **Thinking re-check:** agy 1.5.3, raw `--output-format stream-json` of a Flash-high prompt: events `init`, `user_input`, `agent_response` (ACTIVE with `text_delta`, DONE with `usage`), `result`. 550 `thinking_tokens` spent, no thinking text in any event, and `agy --help` has no flag for it. The thinking state stays inferred.
+- **Narration:** while agy writes text, the `⎿` line now shows its last prose line (what it says between tools) instead of "Writing the answer…"; JSON/code/markdown-table lines keep the generic label (`narration()`, tests in `hooks/narration.test.ts`).
+- **Tagged runs:** `delegar.ps1 -Tag <name>` writes `live\<session id>-<tag>.log`. The main band ignores tagged calls; a 1 s poll (started by the first tagged call, stopped 20 s after none is left) lists in-progress tagged logs and draws one dim `✦ <tag> · time · activity` line each under the band, or alone when no untagged run shows.
+- **Red line only when agy could have written:** `delegar.ps1` now writes `git changed True` only when a watched repo changed and agy used a shell/write tool or a writing mode; other changes are listed in the footer as another chat/sync (tested 2026-11-07 with a tracked file touched mid-run: listed, exit 0, `git changed False`).
+- tsc (outside tsconfig over the bundled types), `claude plugin test` 2/2 and `claude plugin validate` pass. **Not yet seen live:** the mod loads from skills-dir at session start, so the side lines and narration show from the next session on.
+- Untested risks (advisor review, 2026-11-07): the side-line timer runs `Date.parse` on a header timestamp with no timezone, so if the runtime reads it as UTC the line shows a wrong elapsed time (clamped at 0 s); a killed tagged run never writes a footer, so its line lingers until the log is 2 h old. Stale side rows after a reload are cleared in `session.start`.

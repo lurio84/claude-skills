@@ -15,7 +15,7 @@ Personal skills for Claude Code: repeatable procedures Claude runs when I invoke
 | [`task-progress`](./task-progress/) | Claude Code mod (plugin folder, no SKILL.md): a progress bar above the prompt for each background Bash/PowerShell task (reads `PROGRESS n/m`, tqdm or `NN%` from its output), a `/logs` pane with the live log, and a toast when it ends. |
 
 Not versioned here (local only):
-- Third-party skills I installed (`jlhomelab`, `game-feel`, `create-game-assets`, `find-skills`) are listed in `.git/info/exclude`; reinstall them from their sources on a new machine.
+- Third-party skills I installed (`jlhomelab`, `game-feel`, `create-game-assets`, `find-skills`) stay out because `.gitignore` is an allowlist (only the skills listed there are published); reinstall them from their sources on a new machine.
 - `synced/` holds the claude.ai skills Claude Code syncs automatically. They are Anthropic's (all rights reserved), so `.gitignore` keeps them out.
 
 ## Using it on another machine

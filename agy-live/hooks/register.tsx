@@ -60,11 +60,14 @@ function thisRun(all: string[]): string[] {
   return all[0] !== previousHeader ? all : []
 }
 
+// Tag of the run the main band follows: null = an untagged run (<id>.log), a name = a lone tagged run (<id>-<tag>.log).
+let bandTag: string | null = null
+
 async function load($: EngineInterface): Promise<string> {
   const home = (await $.env.get('USERPROFILE')) ?? ''
   let text = ''
   try {
-    text = String(await $.fs.read(`${home}\\.claude\\tools\\live\\${await $.session.id()}.log`))
+    text = String(await $.fs.read(`${home}\\.claude\\tools\\live\\${await $.session.id()}${bandTag ? `-${bandTag}` : ''}.log`))
   } catch {
     return ''
   }
@@ -72,9 +75,10 @@ async function load($: EngineInterface): Promise<string> {
   return text
 }
 
-async function watch($: EngineInterface): Promise<void> {
+async function watch($: EngineInterface, tag: string | null = null): Promise<void> {
   // A later command that only mentions delegar.ps1 (a grep, a cat) must not reset a band that is already running.
   if ((await read($, phase)) === 'running') return
+  bandTag = tag
   const current = (await load($)).replace(/^﻿/, '')
   // A log with a header but no footer is a run already in progress: attach to it instead of waiting for a new one.
   const inProgress = current.startsWith('=====') && !/\n----- /.test(current)
@@ -154,13 +158,29 @@ async function settle($: EngineInterface): Promise<void> {
   else if (/\n----- /.test(text)) await stop($, 'done')
 }
 
-// The main band follows untagged runs only; a run with -Tag writes <session id>-<tag>.log and gets a side line.
+// The main band follows untagged runs, and a tagged run too when it is the only one in progress (2026-11-09: a lone
+// -Tag run showed no big band). Other tagged runs write <session id>-<tag>.log and get a side line.
 function isDelegar(cmd: unknown): boolean {
-  return typeof cmd === 'string' && cmd.includes('delegar.ps1') && !isTagged(cmd)
+  return typeof cmd === 'string' && cmd.includes('delegar.ps1')
 }
 
-function isTagged(cmd: unknown): boolean {
-  return typeof cmd === 'string' && cmd.includes('delegar.ps1') && /\s-Tag\s/i.test(cmd)
+function tagOf(cmd: unknown): string | null {
+  const m = typeof cmd === 'string' && cmd.includes('delegar.ps1') ? /\s-Tag\s+["']?([\w.-]+)/i.exec(cmd) : null
+  return m?.[1] ?? null
+}
+
+// One handler for PowerShell and Bash: untagged -> main band; tagged -> main band if nothing else is running, else side line.
+async function onDelegar($: EngineInterface, e: { command?: unknown; run_in_background?: unknown }, next: (e: any) => Promise<any>) {
+  if (!isDelegar(e.command)) return next(e)
+  const tag = tagOf(e.command)
+  if (tag !== null && ((await read($, phase)) === 'running' || (await read($, side)).length > 0)) {
+    await startSide($)
+    return next(e)
+  }
+  await watch($, tag)
+  const ran = await next(e)
+  if (!e.run_in_background) await settle($)
+  return ran
 }
 
 // Side lines: one per tagged run of this session still in progress (header, no footer), polled every second
@@ -178,6 +198,7 @@ async function pollSide($: EngineInterface): Promise<void> {
   try { entries = await $.fs.list(dir) } catch { entries = [] }
   for (const f of entries) {
     if (f.kind !== 'file' || !f.name.startsWith(prefix) || !f.name.endsWith('.log') || now - f.mtimeMs > 2 * 3600_000) continue
+    if (bandTag && f.name === `${prefix}${bandTag}.log`) continue   // the main band already shows this run
     let text = ''
     try { text = String(await $.fs.read(`${dir}\\${f.name}`)).replace(/^﻿/, '') } catch { continue }
     if (!text.startsWith('=====') || /\n----- /.test(text)) continue
@@ -333,23 +354,9 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('tool.call', { tool: 'PowerShell' }, async ($, e, next) => {
-    if (isTagged(e.command)) await startSide($)
-    if (!isDelegar(e.command)) return next(e)
-    await watch($)
-    const ran = await next(e)
-    if (!e.run_in_background) await settle($)
-    return ran
-  })
+  on('tool.call', { tool: 'PowerShell' }, ($, e, next) => onDelegar($, e, next))
 
-  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
-    if (isTagged(e.command)) await startSide($)
-    if (!isDelegar(e.command)) return next(e)
-    await watch($)
-    const ran = await next(e)
-    if (!e.run_in_background) await settle($)
-    return ran
-  })
+  on('tool.call', { tool: 'Bash' }, ($, e, next) => onDelegar($, e, next))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const now = await read($, phase)

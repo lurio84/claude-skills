@@ -124,6 +124,10 @@ Living note. The new review goes on top; the previous one collapses into a `> [!
 
 Update the frontmatter `ultima-revision:` date.
 
+## How to ask Lucas
+
+Every decision in this review (Phase 0b errors, Phase 1 threads, Phase 3 approvals) goes through `AskUserQuestion`, one decision at a time, each stating what would change and why. Don't end with a block of prose questions (Lucas, 2026-11-11: "ve preguntándome interactivamente diciéndome el qué y por qué").
+
 ## Honest cancellation criterion
 
 If 3 consecutive runs produce no action closed by Lucas → archive the skill and write a `feedback_revisar_vault_no_funciona` memory explaining why.

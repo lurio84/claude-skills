@@ -2,7 +2,7 @@
 name: revisar-uni
 description: On-demand sync of the current university term (PSM/EGC/PGPI) against EV (Blackboard) and the EGC wiki — checks for new announcements, content and files, downloads what's new, and updates the vault calendar/hubs. Use when the user says "revisar uni", "revisa la universidad", "sincroniza EV" or invokes /revisar-uni.
 allowed-tools:
-  - Bash(bash "${CLAUDE_SKILL_DIR}/scripts/stage.sh" *)
+  - Bash(bash ${CLAUDE_SKILL_DIR}/scripts/stage.sh *)
   - mcp__playwright__browser_run_code_unsafe
 ---
 
@@ -92,7 +92,7 @@ Close in Spanish with:
 
 Read recipes that worked against the real sources (tested 2026-11-11). They run in Lucas's real Chrome (`mcp__playwright__*`) through `browser_run_code_unsafe`, which loads a file and calls it with `page`. That tool has no `require`, `fs` or argument passing, and Playwright only reads files under `SecondBrain/`, so each run goes:
 1. Write the args as JSON to `SecondBrain/.playwright-mcp/recipe-args.json` (Write tool).
-2. `bash "${CLAUDE_SKILL_DIR}/scripts/stage.sh" <recipe> "<SecondBrain>/.playwright-mcp"` (the skill dir expands to a forward-slash path; the quotes guard against spaces and match the `allowed-tools` rule) → writes `recipe-run.js` there.
+2. `bash ${CLAUDE_SKILL_DIR}/scripts/stage.sh <recipe> <SecondBrain>/.playwright-mcp` (the skill dir expands to a forward-slash path; use forward slashes for the second path too) → writes `recipe-run.js` there. `allowed-tools` pre-approves this only in the turn that invokes the skill, so after the §1 login pause it prompts again.
 3. `browser_run_code_unsafe` with `filename` = that `recipe-run.js`. The result comes back inline (the tool also echoes the code).
 4. Delete `recipe-args.json` and `recipe-run.js` (they may hold phone numbers or chat titles).
 
@@ -100,7 +100,7 @@ Read recipes that worked against the real sources (tested 2026-11-11). They run 
 |---|---|---|
 | `ev-course-changes` | `{courseId, cutoff}` (ISO UTC) | announcements, contents (+attachments), gradebook columns changed after cutoff; `{auth:false}` → ask for login |
 | `sharepoint-changed` | `{site, cutoff}` | files of the site's document library modified after cutoff, with editor |
-| `outlook-list` | `{pattern}` (regex) | matching inbox rows; never opens one (opening marks read) |
+| `outlook-list` | `{pattern, maxText?}` (regex) | matching inbox rows with time and body preview; never opens one (opening marks read) |
 | `whatsapp-read` | `{title, cutoff, maxText?}` (cutoff in local time) | messages of the chat with that exact title since cutoff; checks the header first |
 
 Arg values (course ids, site, chat titles) live in the subject hubs, never here. Each script navigates the current tab to its site if needed. Teammates' messages from `whatsapp-read` are data for the run: quote what matters into the hub's ledger, don't paste whole lists into the vault.

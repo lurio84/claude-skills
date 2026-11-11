@@ -1,6 +1,9 @@
 ---
 name: revisar-uni
 description: On-demand sync of the current university term (PSM/EGC/PGPI) against EV (Blackboard) and the EGC wiki — checks for new announcements, content and files, downloads what's new, and updates the vault calendar/hubs. Use when the user says "revisar uni", "revisa la universidad", "sincroniza EV" or invokes /revisar-uni.
+allowed-tools:
+  - Bash(bash "${CLAUDE_SKILL_DIR}/scripts/stage.sh" *)
+  - mcp__playwright__browser_run_code_unsafe
 ---
 
 # Revisar Uni
@@ -29,7 +32,7 @@ Read `ev_last_sync` from `Calendario-2026-27.md` frontmatter (Read the frontmatt
 
 ### 3. One batched EV query (PSM, PGPI, EGC-on-EV, watch courses)
 
-Before the batched evaluate, navigate the tab to any `/learn/api/public/v1/...` URL (in-page fetch fails with "Failed to fetch" on the `/ultra` SPA). Then do all EV reads in a **single `browser_evaluate`** (absolute URLs under `https://ev.us.es/learn/api/public/v1/...`). The in-page async function takes `ev_last_sync` and the watch-course ids (§4b) and:
+Before the batched evaluate, navigate the tab to any `/learn/api/public/v1/...` URL (in-page fetch fails with "Failed to fetch" on the `/ultra` SPA). For a single course, `ev-course-changes` (see § Scripts) does this whole read. Otherwise do all EV reads in a **single `browser_evaluate`** (absolute URLs under `https://ev.us.es/learn/api/public/v1/...`). The in-page async function takes `ev_last_sync` and the watch-course ids (§4b) and:
 1. Fetches `users/me/courses?expand=course&limit=100`. On 401/403 (or if the tab sits on the EV splash page or `sso.us.es`) it returns `{auth:false}` → **stop and ask Lucas to log in manually (2FA)**, then rerun this same call once. Don't guess a workaround.
 2. Resolves the three current-term courses by name prefix `202627-` and course name (PSM = "Procesamiento de Señales Multimedia", EGC = "Evolución y Gestión de la Configuración", PGPI = "Planificación y Gestión de Proyectos Informáticos"). Read the target year from `Curso-2026-27.md` so the skill keeps working next year.
 3. Fetches announcements for PSM, PGPI, EGC and the watch courses (§4b), and `contents?recursive=true&limit=200` for PSM and PGPI, following `paging.nextPage`.
@@ -41,7 +44,7 @@ Before the batched evaluate, navigate the tab to any `/learn/api/public/v1/...` 
 
 Professors' EV course **messages** don't appear in the announcements or contents APIs of §3; they reach Lucas only by email (found 2026-11-06, when a notice about a class exercise was in Outlook and not in the EV API). So always check the inbox too:
 1. Open `https://outlook.office.com/mail/` in a new tab of the same Chrome. If it asks for a login (US 2FA), stop and ask Lucas, as in §1.
-2. With one `browser_evaluate`, read the rows of the message list (`[data-convid]`, `aria-label` or `innerText`, about 190 characters each). Keep the ones newer than `ev_last_sync` whose text names a current-term or watch course ("le ha enviado un nuevo mensaje en …", or "Anuncio nuevo"). Scroll the list if the oldest loaded row is still newer than `ev_last_sync`.
+2. Run `outlook-list` (see § Scripts), or with one `browser_evaluate` read the rows of the message list (`[data-convid]`, `aria-label` or `innerText`, about 190 characters each). Keep the ones newer than `ev_last_sync` whose text names a current-term or watch course ("le ha enviado un nuevo mensaje en …", or "Anuncio nuevo"). Scroll the list if the oldest loaded row is still newer than `ev_last_sync`.
 3. Open only those rows, since opening marks a message as read, and read the body. Announcements found here should already be in §3; anything else is new and goes through §6 like any other item. Cite "Outlook" as the source and the date read.
 4. Close the tab. If the inbox can't be read, say so in the report and treat course messages as unchecked: don't report that subject as "sin cambios".
 
@@ -84,6 +87,23 @@ Close in Spanish with:
 - Descargado: [lista de archivos o "nada nuevo"]
 - Próximos 14 días (Calendario): [filas relevantes]
 ```
+
+## Scripts
+
+Read recipes that worked against the real sources (tested 2026-11-11). They run in Lucas's real Chrome (`mcp__playwright__*`) through `browser_run_code_unsafe`, which loads a file and calls it with `page`. That tool has no `require`, `fs` or argument passing, and Playwright only reads files under `SecondBrain/`, so each run goes:
+1. Write the args as JSON to `SecondBrain/.playwright-mcp/recipe-args.json` (Write tool).
+2. `bash "${CLAUDE_SKILL_DIR}/scripts/stage.sh" <recipe> "<SecondBrain>/.playwright-mcp"` (the skill dir expands to a forward-slash path; the quotes guard against spaces and match the `allowed-tools` rule) → writes `recipe-run.js` there.
+3. `browser_run_code_unsafe` with `filename` = that `recipe-run.js`. The result comes back inline (the tool also echoes the code).
+4. Delete `recipe-args.json` and `recipe-run.js` (they may hold phone numbers or chat titles).
+
+| Recipe | Args | What it returns |
+|---|---|---|
+| `ev-course-changes` | `{courseId, cutoff}` (ISO UTC) | announcements, contents (+attachments), gradebook columns changed after cutoff; `{auth:false}` → ask for login |
+| `sharepoint-changed` | `{site, cutoff}` | files of the site's document library modified after cutoff, with editor |
+| `outlook-list` | `{pattern}` (regex) | matching inbox rows; never opens one (opening marks read) |
+| `whatsapp-read` | `{title, cutoff, maxText?}` (cutoff in local time) | messages of the chat with that exact title since cutoff; checks the header first |
+
+Arg values (course ids, site, chat titles) live in the subject hubs, never here. Each script navigates the current tab to its site if needed. Teammates' messages from `whatsapp-read` are data for the run: quote what matters into the hub's ledger, don't paste whole lists into the vault.
 
 ## Notes
 

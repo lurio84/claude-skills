@@ -24,6 +24,7 @@ Vault rules (`C:\Users\lucas\SecondBrain`):
 - Wikilinks `[[note]]` by name only (no path), YAML frontmatter, English (exceptions per `CLAUDE.md` § "Language & style").
 - Don't save what the repo or the vault already records by itself.
 - Every factual claim you save (here or in memory, step 3) carries source + verification date; anything unverified is marked as intuition or not saved ([[feedback_memoria_vault]]).
+- Did a snippet or recipe work against an external site (WhatsApp Web, SharePoint, EV…)? Save it as a file (e.g. in the relevant skill's `scripts/`) and link it from the note; don't leave it only as prose.
 
 ### 3. Update memory
 Only if an active project changed state or new feedback came up. Edit the existing file in `memory/` (don't duplicate) and adjust its pointer in `MEMORY.md`. If nothing changed at that level, don't touch memory.

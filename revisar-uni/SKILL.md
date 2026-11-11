@@ -14,7 +14,7 @@ Sources of truth for the current term live in the vault under `Universidad/2026-
 
 **Read `Curso-2026-27.md` in full before doing anything else** — it holds the course ids, group numbers and year prefix this skill needs. Don't hardcode any of that here: this file is mirrored to a public repo. **Don't read the subject hubs in full** (they are large and grow every week): Grep them for the section you need (practices table, InnoSoft table, …) and Read only that line range, and only once that subject actually has a new item — except EGC's practices and InnoSoft tables, which §4 cross-checks every run (Grep + ranged Read).
 
-**Embedded rule (strict academic accuracy)**: never invent variable names, commands, dates or facts based on generic conventions when an official source exists. Always read the actual official material (Read/WebFetch) before advancing — don't guess from a filename or a ToC. When walking Lucas through a lab/practice step, go one step at a time and wait for him to confirm before continuing.
+**Embedded rule (strict academic accuracy)**: never invent variable names, commands, dates or facts based on generic conventions when an official source exists. Always read the actual official material (Read/WebFetch) before advancing — don't guess from a filename or a ToC.
 
 ## Flow
 
@@ -74,7 +74,7 @@ Re-download an existing local file only if EV's `modified` is newer than the loc
 
 - Add new dated items to `Calendario-2026-27.md` with a `fuente` column entry (EV page / wiki page / PDF+page).
 - Add new facts to the relevant hub. Only write what's sourced; anything uncertain gets marked "sin verificar" rather than asserted.
-- Update `ev_last_sync` to the current UTC datetime.
+- Update `ev_last_sync` to the timestamp captured in §2.
 
 ### 7. Report
 

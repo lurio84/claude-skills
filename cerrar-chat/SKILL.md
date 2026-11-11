@@ -36,7 +36,7 @@ Run `python -I ~/.claude/tools/refcheck.py --vault --changed`. It checks the vau
 
 Then one judgment pass on those notes only: if a note literally mentions the exact title of another existing vault note, wrap it in `[[]]` (body only, never frontmatter or code blocks). Nothing to fix → one line, move on.
 
-### 4b. Re-read pass (what the advisor used to catch)
+### 4b. Re-read pass
 Lucas doesn't want to call the advisor on every close, so do this pass yourself. Don't call the advisor at closing unless the session shipped code, a deploy, a publish or a financial action no advisor call has reviewed yet, or Lucas asks for it. Re-read the files from disk; don't rely on what you remember writing. Scope: every file you edited this session according to your own Edit/Write calls, not only what `git status` shows, because a sync earlier in the session already committed some of them. Add the hub of every topic whose state changed this session, even if you didn't edit that hub.
 - **State sections.** Read each hub's "Estado" or current-state section and each edited memory's state lines. Every line must be true *now*, and its date or "as of" header must be updated. If a memory and its hub both state the same thing, the hub is the source: cut the memory line down to a pointer.
 - **Temporary source files.** Grep those notes for `Downloads`, `AppData\Local\Temp` and `scratchpad`. If a note cites a file there as a source, copy it to a permanent place (the subject's OneDrive folder or the vault) and repoint the note.
@@ -48,7 +48,7 @@ Why this step exists: stale hub/memory state was the most common close miss in t
 Offer it **only** if non-trivial work was left mid-flight — complex mental state (half-done debugging, decision in progress, long reasoning thread) that would be lost in a clean chat. If everything is closed and already in memory/vault, **don't** offer a prompt: it's noise.
 
 ### 6. Commit + push (manual sync)
-As the final step, persist to remote by running the sync script (there's no automatic hook doing it anymore):
+As the final step, persist to remote by running the sync script (no hook does this automatically):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/hooks/sync.ps1

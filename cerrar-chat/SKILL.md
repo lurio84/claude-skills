@@ -54,7 +54,7 @@ As the final step, persist to remote by running the sync script (no hook does th
 powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/hooks/sync.ps1
 ```
 
-Show the result per repo. If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas (probably `gh` not logged in as `lurio84`). Don't close declaring success if any repo didn't reach `pushed` / `up to date`.
+Show the result per repo. If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas (probably `gh` not logged in as `lurio84`). `COMMIT FAILED` usually means another chat was closing at the same time (`index.lock`): wait a few seconds and run the script again. Don't close declaring success if any repo didn't reach `pushed` / `up to date`.
 
 ## Limits (what this skill doesn't do)
 - Don't chain `/revisar-vault`: it's the heavy whole-vault review, costs far more than a close, and Lucas runs it on his own schedule.

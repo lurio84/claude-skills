@@ -277,6 +277,7 @@ async function pollSide($: EngineInterface): Promise<void> {
       tag: f.name.slice(prefix.length, -4),
       secs: started === null ? 0 : Math.max(0, Math.round((now - started) / 1000)),
       step: activity(all, currentMode(all)),
+      tokens: liveTokens(all),
     })
   }
   await update($, side, () => rows)
@@ -433,9 +434,19 @@ export const register: Register = on => {
     if (e.props.hasSurvey || (now === 'idle' && sideRuns.length === 0)) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)
-    // Tagged parallel runs: one dim line each, under the main band (or alone when no untagged run is shown).
+    // Tagged parallel runs: one dim row each, under the main band (or alone when no untagged run is shown), laid out
+    // like Claude's own agent rows under the prompt («( ) Explore  Read six vault notes ⋯ 4s · ↓ 54.5k tokens», window
+    // capture of 2.1.322, 2026-11-12; `( )` is Claude's `figures.circle` in this terminal): glyph, name, what it is
+    // doing, and time and tokens against the right edge. Blue, like the band.
     const sideTree = sideRuns.map(r => (
-      <Text color={BLUE} dimColor wrap="truncate-end">  ✦ {r.tag} · {duration(r.secs)}{r.step ? ` · ${r.step}` : ''}</Text>
+      <Box flexDirection="row" width={e.props.bodyColumns ?? 120}>
+        <Box flexGrow={1} flexShrink={1}>
+          <Text color={BLUE} dimColor wrap="truncate-end">( ) agy {r.tag}{r.step ? `  ${r.step}` : ''}</Text>
+        </Box>
+        <Box flexShrink={0} marginLeft={2}>
+          <Text dimColor>{duration(r.secs)}{r.tokens > 0 ? ` · ↓ ${tokens(r.tokens)} tokens` : ''}</Text>
+        </Box>
+      </Box>
     ))
     const withSide = (main: any) => sideTree.length === 0 ? main : <Box flexDirection="column">{main}{sideTree}</Box>
     if (now === 'idle') return <Box flexDirection="column" marginTop={1}>{sideTree}</Box>

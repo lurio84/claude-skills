@@ -47,6 +47,7 @@ let thoughtAt = 0; // when "thought for" takes over from "thinking"
 let wallStart = null; // the run's own start, from its log header: the timer counts from here
 let reduced = false; // Claude's `prefersReducedMotion` setting: ● with a slow pulse, no sweep
 let rearm;
+let runHeader; // header of the run the band is showing, once it has appeared
 let stalledEased = 0;
 let thinkingEased = 0;
 // Header line of the log before this run: until delegar.ps1 rewrites the file, it still holds the last run.
@@ -115,6 +116,7 @@ async function watch($, tag = null) {
     thinkingStart = null;
     thoughtMs = null;
     thoughtAt = 0;
+    runHeader = inProgress ? current.split(/\r?\n/)[0] : undefined;
     stalledEased = 0;
     thinkingEased = 0;
     spin = $.clock.every(TICK_MS, async () => {
@@ -166,8 +168,21 @@ async function watch($, tag = null) {
         const isNewRun = header !== before;
         if (isNewRun && wallStart === null)
             wallStart = headerTime(header);
+        // The next run of a chained command can replace the log between two reads, footer and all (seen 2026-11-12:
+        // the band carried the first run's verb and timer into the second). A header that changed under a running
+        // band is a new run: start over on it.
+        // (only a real header counts, and a new run that already ended goes to the footer check below)
+        if (isNewRun && runHeader === undefined) {
+            if (header?.startsWith('====='))
+                runHeader = header;
+        }
+        else if (isNewRun && header !== runHeader && header?.startsWith('=====') && !/\n----- /.test(text)) {
+            await stop($, 'idle');
+            return watch($, bandTag);
+        }
         // the timer counts from the run's own start once its header is there (never ahead of the clock)
-        await update($, elapsed, () => (wallStart !== null && wallStart <= now ? Math.round((now - wallStart) / 1000) : seconds));
+        const fromHeader = wallStart !== null && wallStart <= now ? Math.round((now - wallStart) / 1000) : seconds;
+        await update($, elapsed, shown => Math.max(shown, fromHeader)); // the header is stamped a moment after the launch: never step back
         if (text.length !== lastLength) {
             lastLength = text.length;
             lastChangeAt = now;
@@ -280,6 +295,7 @@ async function pollSide($) {
             tag: f.name.slice(prefix.length, -4),
             secs: started === null ? 0 : Math.max(0, Math.round((now - started) / 1000)),
             step: activity(all, currentMode(all)),
+            tokens: liveTokens(all),
         });
     }
     await update($, side, () => rows);
@@ -446,8 +462,18 @@ export const register = on => {
         if (e.props.hasSurvey || (now === 'idle' && sideRuns.length === 0))
             return next(e);
         const { Box, Text } = $.ui.resolve(e);
-        // Tagged parallel runs: one dim line each, under the main band (or alone when no untagged run is shown).
-        const sideTree = sideRuns.map(r => (<Text color={BLUE} dimColor wrap="truncate-end">  ✦ {r.tag} · {duration(r.secs)}{r.step ? ` · ${r.step}` : ''}</Text>));
+        // Tagged parallel runs: one dim row each, under the main band (or alone when no untagged run is shown), laid out
+        // like Claude's own agent rows under the prompt («( ) Explore  Read six vault notes ⋯ 4s · ↓ 54.5k tokens», window
+        // capture of 2.1.322, 2026-11-12; `( )` is Claude's `figures.circle` in this terminal): glyph, name, what it is
+        // doing, and time and tokens against the right edge. Blue, like the band.
+        const sideTree = sideRuns.map(r => (<Box flexDirection="row" width={e.props.bodyColumns ?? 120}>
+        <Box flexGrow={1} flexShrink={1}>
+          <Text color={BLUE} dimColor wrap="truncate-end">( ) agy {r.tag}{r.step ? `  ${r.step}` : ''}</Text>
+        </Box>
+        <Box flexShrink={0} marginLeft={2}>
+          <Text dimColor>{duration(r.secs)}{r.tokens > 0 ? ` · ↓ ${tokens(r.tokens)} tokens` : ''}</Text>
+        </Box>
+      </Box>));
         const withSide = (main) => sideTree.length === 0 ? main : <Box flexDirection="column">{main}{sideTree}</Box>;
         if (now === 'idle')
             return <Box flexDirection="column" marginTop={1}>{sideTree}</Box>;

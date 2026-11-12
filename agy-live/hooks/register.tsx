@@ -57,6 +57,7 @@ let thoughtAt = 0          // when "thought for" takes over from "thinking"
 let wallStart: number | null = null   // the run's own start, from its log header: the timer counts from here
 let reduced = false        // Claude's `prefersReducedMotion` setting: ● with a slow pulse, no sweep
 let rearm: { cancel: () => void } | undefined
+let runHeader: string | undefined   // header of the run the band is showing, once it has appeared
 let stalledEased = 0
 let thinkingEased = 0
 // Header line of the log before this run: until delegar.ps1 rewrites the file, it still holds the last run.
@@ -128,6 +129,7 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
   thinkingStart = null
   thoughtMs = null
   thoughtAt = 0
+  runHeader = inProgress ? current.split(/\r?\n/)[0] : undefined
   stalledEased = 0
   thinkingEased = 0
   spin = $.clock.every(TICK_MS, async () => {
@@ -170,8 +172,18 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
     const header = text.replace(/^﻿/, '').split(/\r?\n/)[0]
     const isNewRun = header !== before
     if (isNewRun && wallStart === null) wallStart = headerTime(header)
+    // The next run of a chained command can replace the log between two reads, footer and all (seen 2026-11-12:
+    // the band carried the first run's verb and timer into the second). A header that changed under a running
+    // band is a new run: start over on it.
+    // (only a real header counts, and a new run that already ended goes to the footer check below)
+    if (isNewRun && runHeader === undefined) { if (header?.startsWith('=====')) runHeader = header }
+    else if (isNewRun && header !== runHeader && header?.startsWith('=====') && !/\n----- /.test(text)) {
+      await stop($, 'idle')
+      return watch($, bandTag)
+    }
     // the timer counts from the run's own start once its header is there (never ahead of the clock)
-    await update($, elapsed, () => (wallStart !== null && wallStart <= now ? Math.round((now - wallStart) / 1000) : seconds))
+    const fromHeader = wallStart !== null && wallStart <= now ? Math.round((now - wallStart) / 1000) : seconds
+    await update($, elapsed, shown => Math.max(shown, fromHeader)) // the header is stamped a moment after the launch: never step back
     if (text.length !== lastLength) { lastLength = text.length; lastChangeAt = now }
     if ((isNewRun && /\n----- /.test(text)) || seconds > 30 * 60) await stop($, 'done')
     // A background run that was blocked (exit 2) never writes a header: don't leave the band "running".

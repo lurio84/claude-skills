@@ -55,7 +55,6 @@ let thinkingStart: number | null = null
 let thoughtMs: number | null = null
 let thoughtAt = 0          // when "thought for" takes over from "thinking"
 let wallStart: number | null = null   // the run's own start, from its log header: the timer counts from here
-let reduced = false        // Claude's `prefersReducedMotion` setting: ● with a slow pulse, no sweep
 let rearm: { cancel: () => void } | undefined
 let runHeader: string | undefined   // header of the run the band is showing, once it has appeared
 let stalledEased = 0
@@ -114,7 +113,6 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
   rearm?.cancel()
   // a run already in progress counts from its own start, not from this attach
   wallStart = inProgress ? headerTime(current.split(/\r?\n/)[0]) : null
-  reduced = (await $.settings.read({ key: 'prefersReducedMotion' }).catch(() => false)) === true
   await update($, elapsed, () => 0)
   await update($, phase, () => 'running' as Phase)
   await update($, shownTokens, () => 0)
@@ -185,7 +183,9 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
     const fromHeader = wallStart !== null && wallStart <= now ? Math.round((now - wallStart) / 1000) : seconds
     await update($, elapsed, shown => Math.max(shown, fromHeader)) // the header is stamped a moment after the launch: never step back
     if (text.length !== lastLength) { lastLength = text.length; lastChangeAt = now }
-    if ((isNewRun && /\n----- /.test(text)) || seconds > 30 * 60) await stop($, 'done')
+    if (isNewRun && /\n----- /.test(text)) await stop($, 'done')
+    // past 30 minutes with no footer the band gives up quietly: 'done' with no footer drew a false red "needs a look"
+    else if (seconds > 30 * 60) await stop($, 'idle')
     // A background run that was blocked (exit 2) never writes a header: don't leave the band "running".
     else if (!isNewRun && seconds > 15) await stop($, 'idle')
   })
@@ -404,6 +404,19 @@ function liveTokens(all: string[]): number {
 }
 
 export const register: Register = on => {
+  // /clear and resume go on under a new session id, whose log is another file: a band left running would read a
+  // missing log as a new run and stay frozen until the 30-minute cap (independent review, 2026-11-12).
+  on('session.end', async ($, e, next) => {
+    tick?.cancel()
+    spin?.cancel()
+    rearm?.cancel()
+    sidePoll?.cancel()
+    sidePoll = undefined
+    await update($, phase, () => 'idle' as Phase)
+    await update($, side, () => [])
+    return next(e)
+  })
+
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'agy', description: 'Show the full log of the last agy delegation' })
     // Timers don't survive a reload or restart; a run left "running" would count forever.
@@ -437,9 +450,9 @@ export const register: Register = on => {
     // Tagged parallel runs: one dim row each, under the main band (or alone when no untagged run is shown), laid out
     // like Claude's own agent rows under the prompt («( ) Explore  Read six vault notes ⋯ 4s · ↓ 54.5k tokens», window
     // capture of 2.1.322, 2026-11-12; `( )` is Claude's `figures.circle` in this terminal): glyph, name, what it is
-    // doing, and time and tokens against the right edge. Blue, like the band.
+    // doing, and time and tokens against the right edge. Dim blue, which reads as grey, like Claude's own rows.
     const sideTree = sideRuns.map(r => (
-      <Box flexDirection="row" width={e.props.bodyColumns ?? 120}>
+      <Box key={r.tag} flexDirection="row" width={e.props.bodyColumns}>
         <Box flexGrow={1} flexShrink={1}>
           <Text color={BLUE} dimColor wrap="truncate-end">( ) agy {r.tag}{r.step ? `  ${r.step}` : ''}</Text>
         </Box>
@@ -487,7 +500,6 @@ export const register: Register = on => {
     const message = `${verb}…`
     let label
     if (tinted) label = <Text color={tinted}>{message}</Text>
-    else if (reduced) label = <Text color={BLUE}>{message}</Text>   // reduced motion: no sweep, no pulse
     else if (mode === 'tool') {
       // Tool running: no sweep, the whole message pulses (zn), period 2 s, quantised to 1/8.
       label = <Text color={mix(BLUE, LIGHT, q8((Math.sin((t / 1000) * Math.PI) + 1) / 2))}>{message}</Text>
@@ -503,7 +515,7 @@ export const register: Register = on => {
     else if (mode === 'thinking' && thinkingStart !== null) {
       // Claude appends the effort (" with high effort") and falls back to the bare word when the row is too narrow
       const full = `${thinkingLabel(nowMs - thinkingStart)}${effortSuffix(thisRun(all)[0])}`
-      status = message.length + full.length + 40 <= (e.props.bodyColumns ?? 120) ? full : 'thinking'
+      status = message.length + full.length + 40 <= e.props.bodyColumns ? full : 'thinking'
     } else if (thoughtMs !== null && nowMs < thoughtAt) status = 'thinking'
     else if (thoughtMs !== null && nowMs < thoughtAt + THOUGHT_MS) status = `thought for ${Math.max(1, Math.round(thoughtMs / 1000))}s`
     // Thinking text: grey pulse 153→185 (2 s), toward warning with the thinking intensity.
@@ -528,10 +540,7 @@ export const register: Register = on => {
     return withSide(
       <Box flexDirection="column" marginTop={1}>
         <Text>
-          {reduced
-            // Claude's reduced-motion glyph (Ave): ● pulsing between the colour and its half-dark, 2 s, in 1/8 steps
-            ? <Text color={mix(mix(tinted ?? BLUE, '#000000', 0.5), tinted ?? BLUE, q8(1 - (1 - Math.cos((2 * Math.PI * t) / GLYPH_PERIOD)) / 2))} bold={bold}>● </Text>
-            : <Text color={tinted ?? BLUE} bold={bold}>{glyphAt(t)} </Text>}
+          <Text color={tinted ?? BLUE} bold={bold}>{glyphAt(t)} </Text>
           {label}
           {suffix}
         </Text>

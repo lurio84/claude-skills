@@ -51,8 +51,10 @@ Offer it **only** if non-trivial work was left mid-flight — complex mental sta
 As the final step, persist to remote by running the sync script (no hook does this automatically):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/hooks/sync.ps1
+powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/hooks/sync.ps1 -Label "<chat topic>" -Paths "<abs path>;<abs path>"
 ```
+
+`-Label`: 2-5 words naming this chat's topic (no quotes inside). `-Paths`: absolute Windows paths of every file this chat created or edited, from your own Edit/Write calls (vault notes, memory files, skills, hooks), `;`-separated. Files already committed or unchanged are skipped. The script commits them first as `[label]`, then everything else (other open chats) as `[other chats]`, so the history shows which chat did what. On a trivial chat with no edits, run it without parameters.
 
 Show the result per repo. If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas (probably `gh` not logged in as `lurio84`). `COMMIT FAILED` usually means another chat was closing at the same time (`index.lock`): wait a few seconds and run the script again. Don't close declaring success if any repo didn't reach `pushed` / `up to date`.
 

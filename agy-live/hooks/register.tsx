@@ -17,8 +17,8 @@ const shownTokens = atom({ plugin: 'agy-live', key: 'shownTokens' } as const, 0)
 const side = atom({ plugin: 'agy-live', key: 'side' } as const, [] as SideRun[])
 
 // Behaviour copied from Claude's spinner: constants and formulas read from the bundled JS of claude.exe
-// (installed 2026-11-04, re-read 2026-11-05; see ../SPEC.md). Only the colour differs: blue, so the band can't be
-// confused with Claude's orange spinner right above it.
+// (first read 2026-11-05; re-read against 2.1.322 on 2026-11-12, see ../SPEC.md). Only the colour differs: blue,
+// so the band can't be confused with Claude's orange spinner right above it.
 const GLYPHS = ['·', '✢', '*', '✶', '✻', '✽']   // non-Ghostty frames
 const GLYPH_PERIOD = 2000   // Hn: one smooth there-and-back through the frames every 2 s
 const SWEEP_PAD = 10        // me
@@ -31,8 +31,10 @@ const BLUE = '#4285F4'    // messageColor
 const LIGHT = '#A8C7FA'   // shimmerColor
 const RED = '#AB2B3F'     // Claude's stall colour, rgb(171,43,63)
 const ERROR = '#EA4335'
-const WARNING = '#FFC107' // a dark-theme `warning` from Claude's theme table, rgb(255,193,7)
+const WARNING = '#FFC107' // `warning` of Claude's dark theme, rgb(255,193,7) (theme table of 2.1.322, read 2026-11-12)
 const TICK_MS = 50
+const THOUGHT_MS = 2000   // "thinking" shows at least this long, then "thought for Ns" for as long again
+const REARM_MS = 60_000   // after a run ends, how long the band watches for the next run of a chained command
 
 // Claude's spinner modes. agy reports no thinking events, but its steps do spend thinking tokens (all medium/high
 // runs on 2026-11-05; none at low), so a wait on the model is Claude's "thinking", or "requesting" for -low models.
@@ -51,6 +53,10 @@ let toolWindowStart: number | null = null
 let toolWindowEnd: number | null = null
 let thinkingStart: number | null = null
 let thoughtMs: number | null = null
+let thoughtAt = 0          // when "thought for" takes over from "thinking"
+let wallStart: number | null = null   // the run's own start, from its log header: the timer counts from here
+let reduced = false        // Claude's `prefersReducedMotion` setting: ● with a slow pulse, no sweep
+let rearm: { cancel: () => void } | undefined
 let stalledEased = 0
 let thinkingEased = 0
 // Header line of the log before this run: until delegar.ps1 rewrites the file, it still holds the last run.
@@ -58,6 +64,23 @@ let previousHeader: string | undefined
 
 function thisRun(all: string[]): string[] {
   return all[0] !== previousHeader ? all : []
+}
+
+// When a run started, from its header "===== 2026-11-12 10:00:00 | …", read as local time field by field
+// (Date.parse of a string with no zone may take it as UTC). null when the line is not a header.
+export function headerTime(header: string | undefined): number | null {
+  const m = /^=====\s(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)/.exec((header ?? '').replace(/^﻿/, ''))
+  if (!m) return null
+  const [y, mo, d, h, mi, s] = m.slice(1).map(Number) as [number, number, number, number, number, number]
+  return new Date(y, mo - 1, d, h, mi, s).getTime()
+}
+
+// Claude's effort suffix on the thinking label (" with high effort"), from the header's "model/effort" field:
+// the effort after the slash, or the one a model name ends in (gemini-…-flash-high).
+export function effortSuffix(header: string | undefined): string {
+  const field = (header ?? '').split(' | ')[1] ?? ''
+  const effort = /\/(\w+)\s*$/.exec(field)?.[1] ?? /-(low|medium|high|xhigh|max)\/?\s*$/.exec(field)?.[1]
+  return effort ? ` with ${effort} effort` : ''
 }
 
 // Tag of the run the main band follows: null = an untagged run (<id>.log), a name = a lone tagged run (<id>-<tag>.log).
@@ -87,6 +110,10 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
   const startedAt = await $.clock.now()
   tick?.cancel()
   spin?.cancel()
+  rearm?.cancel()
+  // a run already in progress counts from its own start, not from this attach
+  wallStart = inProgress ? headerTime(current.split(/\r?\n/)[0]) : null
+  reduced = (await $.settings.read({ key: 'prefersReducedMotion' }).catch(() => false)) === true
   await update($, elapsed, () => 0)
   await update($, phase, () => 'running' as Phase)
   await update($, shownTokens, () => 0)
@@ -100,6 +127,7 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
   toolWindowEnd = null
   thinkingStart = null
   thoughtMs = null
+  thoughtAt = 0
   stalledEased = 0
   thinkingEased = 0
   spin = $.clock.every(TICK_MS, async () => {
@@ -115,7 +143,12 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
       toolWindowEnd = null
     } else if (toolWindowStart !== null && toolWindowEnd === null) toolWindowEnd = now
     if (mode === 'thinking' && was !== 'thinking') { thinkingStart = now; toolWindowStart = null; toolWindowEnd = null }
-    if (mode !== 'thinking' && was === 'thinking' && thinkingStart !== null) { thoughtMs = now - thinkingStart; thinkingStart = null }
+    // Claude's Xe: a burst shorter than 2 s still reads "thinking" for 2 s, then "thought for Ns" shows for 2 s.
+    if (mode !== 'thinking' && was === 'thinking' && thinkingStart !== null) {
+      thoughtMs = now - thinkingStart
+      thoughtAt = now + Math.max(0, THOUGHT_MS - thoughtMs)
+      thinkingStart = null
+    }
     // Targets as in Claude's Ye/Fe: 0 → 1 between 10 s and 20 s, eased 10 % of the gap per 50 ms.
     const stalledTarget = mode === 'responding' ? Math.min(1, Math.max(0, (now - lastChangeAt - 10_000) / 10_000)) : 0
     const thinkingTarget = mode === 'thinking' && thinkingStart !== null ? Math.min(1, Math.max(0, (now - thinkingStart - 10_000) / 10_000)) : 0
@@ -134,9 +167,12 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
     const text = await load($)
     const now = await $.clock.now()
     const seconds = Math.round((now - startedAt) / 1000)
-    await update($, elapsed, () => seconds)
+    const header = text.replace(/^﻿/, '').split(/\r?\n/)[0]
+    const isNewRun = header !== before
+    if (isNewRun && wallStart === null) wallStart = headerTime(header)
+    // the timer counts from the run's own start once its header is there (never ahead of the clock)
+    await update($, elapsed, () => (wallStart !== null && wallStart <= now ? Math.round((now - wallStart) / 1000) : seconds))
     if (text.length !== lastLength) { lastLength = text.length; lastChangeAt = now }
-    const isNewRun = text.replace(/^﻿/, '').split(/\r?\n/)[0] !== before
     if ((isNewRun && /\n----- /.test(text)) || seconds > 30 * 60) await stop($, 'done')
     // A background run that was blocked (exit 2) never writes a header: don't leave the band "running".
     else if (!isNewRun && seconds > 15) await stop($, 'idle')
@@ -146,7 +182,28 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
 async function stop($: EngineInterface, to: Phase): Promise<void> {
   tick?.cancel()
   spin?.cancel()
+  rearm?.cancel()
   await update($, phase, () => to)
+  if (to !== 'done') return
+  // Several delegar.ps1 runs chained in one command: nothing calls watch() for the second, so for a minute
+  // after a run ends look for a new header with no footer in the same log, and follow it.
+  const finished = (await read($, lines))[0]
+  const since = await $.clock.now()
+  rearm = $.clock.every(1000, async () => {
+    if ((await $.clock.now()) - since > REARM_MS || (await read($, phase)) === 'running') return rearm?.cancel()
+    const text = await peek($)
+    if (text.startsWith('=====') && text.split(/\r?\n/)[0] !== finished && !/\n----- /.test(text)) await watch($, bandTag)
+  })
+}
+
+// The band's log as it is now, without touching what the band shows.
+async function peek($: EngineInterface): Promise<string> {
+  const home = (await $.env.get('USERPROFILE')) ?? ''
+  try {
+    return String(await $.fs.read(`${home}\\.claude\\tools\\live\\${await $.session.id()}${bandTag ? `-${bandTag}` : ''}.log`)).replace(/^﻿/, '')
+  } catch {
+    return ''
+  }
 }
 
 // After a foreground run returns: no new log (blocked, crashed, or the command only mentioned
@@ -203,10 +260,10 @@ async function pollSide($: EngineInterface): Promise<void> {
     try { text = String(await $.fs.read(`${dir}\\${f.name}`)).replace(/^﻿/, '') } catch { continue }
     if (!text.startsWith('=====') || /\n----- /.test(text)) continue
     const all = text.split(/\r?\n/)
-    const started = Date.parse((/^===== (\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)/.exec(all[0] ?? '') ?? []).slice(1, 3).join('T'))
+    const started = headerTime(all[0])
     rows.push({
       tag: f.name.slice(prefix.length, -4),
-      secs: Number.isNaN(started) ? 0 : Math.max(0, Math.round((now - started) / 1000)),
+      secs: started === null ? 0 : Math.max(0, Math.round((now - started) / 1000)),
       step: activity(all, currentMode(all)),
     })
   }
@@ -407,6 +464,7 @@ export const register: Register = on => {
     const message = `${verb}…`
     let label
     if (tinted) label = <Text color={tinted}>{message}</Text>
+    else if (reduced) label = <Text color={BLUE}>{message}</Text>   // reduced motion: no sweep, no pulse
     else if (mode === 'tool') {
       // Tool running: no sweep, the whole message pulses (zn), period 2 s, quantised to 1/8.
       label = <Text color={mix(BLUE, LIGHT, q8((Math.sin((t / 1000) * Math.PI) + 1) / 2))}>{message}</Text>
@@ -419,8 +477,12 @@ export const register: Register = on => {
     let status: string | null = null
     if (toolWindowStart !== null && mode === 'tool' && nowMs - toolWindowStart >= 2000) status = `running tool for ${duration(Math.floor((nowMs - toolWindowStart) / 1000))}`
     else if (toolWindowStart !== null && toolWindowEnd !== null && toolWindowEnd - toolWindowStart >= 2000) status = `ran tool for ${duration(Math.floor((toolWindowEnd - toolWindowStart) / 1000))}`
-    else if (mode === 'thinking' && thinkingStart !== null) status = thinkingLabel(nowMs - thinkingStart)
-    else if (thoughtMs !== null) status = `thought for ${Math.max(1, Math.round(thoughtMs / 1000))}s`
+    else if (mode === 'thinking' && thinkingStart !== null) {
+      // Claude appends the effort (" with high effort") and falls back to the bare word when the row is too narrow
+      const full = `${thinkingLabel(nowMs - thinkingStart)}${effortSuffix(thisRun(all)[0])}`
+      status = message.length + full.length + 40 <= (e.props.bodyColumns ?? 120) ? full : 'thinking'
+    } else if (thoughtMs !== null && nowMs < thoughtAt) status = 'thinking'
+    else if (thoughtMs !== null && nowMs < thoughtAt + THOUGHT_MS) status = `thought for ${Math.max(1, Math.round(thoughtMs / 1000))}s`
     // Thinking text: grey pulse 153→185 (2 s), toward warning with the thinking intensity.
     const grey = Math.round(153 + 32 * ((Math.sin((t / 1000) * Math.PI) + 1) / 2)).toString(16).padStart(2, '0')
     const thinkingColor = thinkingEased > 0.5 ? WARNING : mix(`#${grey}${grey}${grey}`, WARNING, thinkingEased)
@@ -443,7 +505,10 @@ export const register: Register = on => {
     return withSide(
       <Box flexDirection="column" marginTop={1}>
         <Text>
-          <Text color={tinted ?? BLUE} bold={bold}>{glyphAt(t)} </Text>
+          {reduced
+            // Claude's reduced-motion glyph (Ave): ● pulsing between the colour and its half-dark, 2 s, in 1/8 steps
+            ? <Text color={mix(mix(tinted ?? BLUE, '#000000', 0.5), tinted ?? BLUE, q8(1 - (1 - Math.cos((2 * Math.PI * t) / GLYPH_PERIOD)) / 2))} bold={bold}>● </Text>
+            : <Text color={tinted ?? BLUE} bold={bold}>{glyphAt(t)} </Text>}
           {label}
           {suffix}
         </Text>

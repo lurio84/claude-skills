@@ -1,0 +1,336 @@
+import { atom, read, update } from 'claude-code';
+const PANE = 'task-logs';
+const TAIL = 200; // log lines kept per task
+const LINGER_MS = 15000; // a finished task stays in the band this long
+const LOST_MS = 60000; // a task whose output file never shows up leaves the band after this
+const tasks = atom({ plugin: 'task-progress', key: 'tasks' }, []);
+const viewing = atom({ plugin: 'task-progress', key: 'viewing' }, null);
+const KILLED = 143; // a stopped task's file ends in `[killed]`, no code: shown as SIGTERM's
+const ANSI = /\x1b\[[0-9;?]*[A-Za-z]/g;
+export const BLIND_PIPE = /\|\s*(tail|head|grep|sort|uniq|Select-Object\s+-(First|Last)|Select-String)\b/i;
+const BLIND_PIPE_NOTE = 'task-progress: this background command pipes its output through a filter (tail/head/grep/Select-*), ' +
+    'so nothing reaches the output file until it ends and the progress bar stays blind. If the job is long, stop it and relaunch ' +
+    'without the pipe (filter when reading the file); scripts should print flushed `PROGRESS cur/total note` lines.';
+/** Progress from a task's output: an explicit `PROGRESS cur/total note` line wins, else tqdm / `N/M` / `NN%` on the last line. */
+export function parse(text) {
+    const lines = text.replace(ANSI, '').split(/\r\n|\r|\n/).map(l => l.trimEnd()).filter(l => l.trim() !== '');
+    const exit = /\[(?:exited with code (-?\d+)|killed)\]\s*$/.exec(text);
+    const body = exit ? lines.slice(0, -1) : lines;
+    const last = body.at(-1) ?? '';
+    let cur = null;
+    let total = null;
+    let frac = null;
+    let note = last;
+    for (let i = body.length - 1; i >= 0; i--) {
+        const m = /^PROGRESS\s+(\d+)\s*\/\s*(\d+)\s*(.*)$/.exec(body[i].trim());
+        if (m) {
+            cur = Number(m[1]);
+            total = Number(m[2]);
+            note = m[3] || last;
+            break;
+        }
+    }
+    if (total === null) {
+        const nm = /(\d+)\s*\/\s*(\d+)(?!\d)/.exec(last);
+        const pct = /(\d{1,3}(?:\.\d+)?)\s*%/.exec(last);
+        if (nm && Number(nm[2]) > 0 && Number(nm[1]) <= Number(nm[2])) {
+            cur = Number(nm[1]);
+            total = Number(nm[2]);
+        }
+        else if (pct) {
+            frac = Math.min(1, Number(pct[1]) / 100);
+        }
+    }
+    if (total)
+        frac = cur / total;
+    return { lines: body.slice(-TAIL), cur, total, frac, note, exitCode: exit ? (exit[1] === undefined ? KILLED : Number(exit[1])) : null };
+}
+const clock = (ms) => {
+    const s = Math.max(0, Math.round(ms / 1000));
+    const h = Math.floor(s / 3600);
+    const mm = String(Math.floor((s % 3600) / 60)).padStart(h ? 2 : 1, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};
+const SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
+const MAX_READ = 4 * 1024 * 1024; // `$.fs.read` rejects a bigger file, and takes no offset to read its end
+const STYLES = {
+    a: 'Claude-style: no box, ▬─ bar',
+    b: 'box, ■□ gradient (today, polished)',
+    c: 'hybrid: no box, ▬─ gradient',
+};
+let gallery = true;
+// Claude Code's spinner glyphs and their 2 s there-and-back cycle (read from claude.exe 2.1.322, 2026-11-12)
+const GLYPHS = ['·', '✢', '*', '✶', '✻', '✽'];
+const glyph = (now) => GLYPHS[Math.round(((1 - Math.cos((2 * Math.PI * now) / 2000)) / 2) * (GLYPHS.length - 1))] ?? '·';
+/** Progress drawn now: the last parsed value moved on at its average rate, never past the next reported step. */
+function smooth(t, now) {
+    if (t.endedAt !== null)
+        return t.exitCode === 0 ? 1 : t.frac;
+    if (t.frac === null || t.frac <= 0 || !(t.changedAt > t.startedAt))
+        return t.frac; // also a row saved before changedAt existed
+    const rate = t.frac / (t.changedAt - t.startedAt);
+    const cap = t.total ? (t.cur + 1) / t.total : t.frac + 0.05;
+    return Math.min(t.frac + rate * (now - t.changedAt), cap - 0.002, 0.999);
+}
+const mix = (a, b, k) => '#' + a.map((x, i) => Math.round(x + (b[i] - x) * k).toString(16).padStart(2, '0')).join('');
+const CYAN = [90, 209, 255];
+const VIOLET = [180, 140, 255];
+const TRACK = [58, 64, 75];
+const hex = (c) => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+/**
+ * One cell per entry, filled (■) or hollow (□) squares. While running, the fill is a cyan-to-violet gradient whose
+ * leading square brightens with the fraction of its cell, and a glint travels along the filled part; with no number,
+ * a short run of squares sweeps back and forth.
+ */
+function cells(frac, width, now, ended, style = 'b') {
+    const out = [];
+    const done = ended !== undefined;
+    const [on, off] = style === 'b' ? ['■', '□'] : ['▬', '─'];
+    const WHITE = [229, 231, 235];
+    const grad = (i) => (style === 'a' ? WHITE : hex(mix(CYAN, VIOLET, i / width)));
+    if (frac === null && !done) {
+        const pos = (now / 60) % (2 * width);
+        const at = pos < width ? pos : 2 * width - pos;
+        for (let i = 0; i < width; i++) {
+            const k = Math.max(0, 1 - Math.abs(i - at) / 2.5);
+            out.push(k > 0 ? { ch: on, color: mix(TRACK, grad(i), k) } : { ch: off, color: '#3a404b' });
+        }
+        return out;
+    }
+    const x = (frac ?? 0) * width;
+    const full = Math.floor(x);
+    const glint = (now / 45) % (full + 10); // passes the filled part, then rests off the end for a beat
+    for (let i = 0; i < width; i++) {
+        if (done) {
+            out.push(i < Math.round(x) ? { ch: on, color: ended === 0 ? '#58d68d' : '#ff6b6b' } : { ch: off, color: '#3a404b' });
+        }
+        else if (i < full) {
+            const shine = style === 'a' ? 0 : Math.max(0, 1 - Math.abs(i - glint) / 2);
+            out.push({ ch: on, color: mix(grad(i), [255, 255, 255], shine * 0.55) });
+        }
+        else if (i === full && x > full) {
+            out.push({ ch: on, color: mix(TRACK, grad(i), x - full) });
+        }
+        else {
+            out.push({ ch: off, color: '#3a404b' });
+        }
+    }
+    return out;
+}
+const cut = (s, n) => (s.length > n ? s.slice(0, Math.max(0, n - 1)) + '…' : s);
+/**
+ * Where a task's output really is. The guess built from `$.session.id()` misses after a `/clear` (the output keeps
+ * going to another session folder), so look for `tasks\<id>.output` in every session folder of this project.
+ * The project folder used to be the cwd with :\/ as dashes; newer builds (seen 2026-11-05, 2.1.318) use a hash,
+ * so also take any folder under %TEMP%\claude that holds this session's folder.
+ */
+async function locate($, t) {
+    if (t.path !== null && (await $.fs.exists(t.path)))
+        return t.path;
+    const temp = await $.env.get('TEMP');
+    if (!temp)
+        return null;
+    const root = `${temp}\\claude`;
+    const sessionId = await $.session.id();
+    const projects = [`${root}\\${(await $.session.cwd()).replace(/[:\\/]/g, '-')}`];
+    for (const top of await $.fs.list(root).catch(() => [])) {
+        if (top.kind === 'dir' && (await $.fs.exists(`${root}\\${top.name}\\${sessionId}`)))
+            projects.push(`${root}\\${top.name}`);
+    }
+    for (const project of projects) {
+        for (const session of await $.fs.list(project).catch(() => [])) {
+            const p = `${project}\\${session.name}\\tasks\\${t.id}.output`;
+            if (session.kind === 'dir' && (await $.fs.exists(p)))
+                return p;
+        }
+    }
+    return null;
+}
+export const register = on => {
+    on('session.start', async ($, e, next) => {
+        await $.command.register({ name: 'logs', description: 'Show the live log of the latest background task' });
+        // Animation frames (spinner, sweep, extrapolated fill) while something runs.
+        $.clock.every(100, async () => {
+            if ((await read($, tasks)).some(t => t.endedAt === null))
+                $.ui.invalidate('ui.render');
+        });
+        // Poll the output file of every running task once a second.
+        $.clock.every(1000, async () => {
+            const list = await read($, tasks);
+            const now = await $.clock.now();
+            if (!list.some(t => t.endedAt === null)) {
+                // Redraw while a finished row lingers, so it leaves the band on time.
+                if (list.some(t => now - t.endedAt < LINGER_MS + 2000))
+                    $.ui.invalidate('ui.render');
+                return;
+            }
+            const fresh = {};
+            for (const t of list) {
+                if (t.endedAt !== null)
+                    continue;
+                const path = t.found ? t.path : await locate($, t);
+                if (path === null) {
+                    if (now - t.startedAt > LOST_MS)
+                        fresh[t.id] = { endedAt: now, note: 'log not found' };
+                    continue;
+                }
+                let text;
+                try {
+                    text = await $.fs.read(path);
+                }
+                catch {
+                    // A log past the read limit can no longer be followed: say so and let the row go, instead of a bar that
+                    // stays frozen for good. Any other failure (the file is being written) is tried again next second.
+                    const size = await $.fs.stat(path).then(s => s.size, () => 0);
+                    if (size > MAX_READ)
+                        fresh[t.id] = { path, found: true, endedAt: now, note: 'log over 4 MiB: no longer followed (the job may still be running)' };
+                    continue;
+                }
+                const p = parse(text);
+                fresh[t.id] = {
+                    path, found: true,
+                    cur: p.cur, total: p.total, frac: p.frac, note: p.note, tail: p.lines,
+                    ...(p.frac !== t.frac ? { changedAt: now } : {}),
+                    ...(p.exitCode !== null ? { exitCode: p.exitCode, endedAt: now } : {}),
+                };
+            }
+            await update($, tasks, all => all.map(t => (fresh[t.id] ? { ...t, ...fresh[t.id] } : t)));
+            for (const t of list) {
+                const f = fresh[t.id];
+                if (f?.exitCode === undefined)
+                    continue; // still running, or lost (no toast for those)
+                $.ui.toast(`${f.exitCode === 0 ? '✓' : `✗ exit ${f.exitCode}`}  ${t.label} · ${clock(now - t.startedAt)}`);
+            }
+        });
+        return next(e);
+    });
+    on('tool.call', { tool: ['Bash', 'PowerShell'] }, async ($, e, next) => {
+        const ran = await next(e);
+        const id = ran.deny === undefined && !ran.isError ? ran.result?.backgroundTaskId : undefined;
+        if (id === undefined)
+            return ran;
+        const [temp, cwd, session, now] = await Promise.all([
+            $.env.get('TEMP'), $.session.cwd(), $.session.id(), $.clock.now(),
+        ]);
+        // Claude Code writes background output to %TEMP%\claude\<cwd with :\/ as dashes>\<session id>\tasks\<id>.output
+        // Kept even when the file is not there yet: the poll retries it every second.
+        const path = temp ? `${temp}\\claude\\${cwd.replace(/[:\\/]/g, '-')}\\${session}\\tasks\\${id}.output` : null;
+        const task = {
+            id, label: e.description || e.command.slice(0, 60), path, startedAt: now, endedAt: null, exitCode: null,
+            cur: null, total: null, frac: null, changedAt: now, note: path ? '' : '(TEMP not set: no log)', tail: [],
+        };
+        await update($, tasks, all => [...all.filter(t => t.id !== id), task].slice(-20));
+        // A filter pipe holds the job's lines back until it ends, so the bar stays blind (memory feedback_progress_mod_convention).
+        if (ran.deny === undefined && BLIND_PIPE.test(e.command)) {
+            return { ...ran, context: [...(ran.context ?? []), BLIND_PIPE_NOTE] };
+        }
+        return ran;
+    }).catch(($, e, next) => next(e)); // tracking must never block a Bash call
+    on('command.run', { command: 'logs' }, async ($, e) => {
+        if (e.args.trim() === 'gallery') {
+            gallery = !gallery;
+            $.ui.invalidate('ui.render');
+            return { text: `Style gallery ${gallery ? 'on' : 'off'}.` };
+        }
+        const list = await read($, tasks);
+        if (list.length === 0)
+            return { text: 'No background tasks yet in this session.' };
+        await update($, viewing, () => list.at(-1).id);
+        await $.ui.open({ id: PANE, title: 'Task logs' });
+        return { text: 'Task log pane opened.' };
+    });
+    on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+        const now = await $.clock.now();
+        const live = (await read($, tasks)).filter(t => t.endedAt === null || now - t.endedAt < LINGER_MS);
+        if (live.length === 0)
+            return next(e);
+        const shown = gallery ? live.slice(-1) : live; // the gallery draws one task three times: more would not fit the band
+        const { Box, Button, Text } = $.ui.resolve(e);
+        const cols = (e.props.bodyColumns ?? 80) - 4; // round border + padding
+        const barWidth = Math.max(10, Math.min(32, cols - 62));
+        const labelWidth = Math.min(26, Math.max(...shown.map(t => t.label.length)));
+        // One task in one style. 'b' is the boxed row; 'a' and 'c' follow Claude's own spinner row: its glyph, a dim
+        // "(time · ETA · n/m)" suffix, the note under ⎿, and one dim line once the task is done.
+        const row = (t, i, style) => {
+            const end = t.endedAt ?? now;
+            const running = t.endedAt === null;
+            const shownFrac = smooth(t, now);
+            const eta = running && t.frac !== null && t.frac > 0.02 && t.frac < 1 && t.changedAt > t.startedAt
+                ? `ETA ${clock(((t.changedAt - t.startedAt) * (1 - t.frac)) / t.frac - (now - t.changedAt))}` : '';
+            const count = t.total !== null ? `${t.cur}/${t.total}` : '';
+            const pct = shownFrac !== null ? `${String(Math.floor(shownFrac * 100)).padStart(3)}%` : '    ';
+            const lost = !running && t.exitCode === null;
+            const failed = !running && !lost && t.exitCode !== 0;
+            const icon = running ? (style === 'b' ? SPIN[Math.floor(now / 100) % SPIN.length] : glyph(now - t.startedAt)) : lost ? '–' : failed ? '✗' : '✓';
+            const accent = running ? '#5ad1ff' : lost ? '#6b7280' : failed ? '#ff6b6b' : '#58d68d';
+            const bar = cells(shownFrac, barWidth, now, running ? undefined : t.exitCode, style).map((c, k) => (<Text key={`c${k}`} color={c.color}>{c.ch}</Text>));
+            const log = (<Button key={`log-${style}-${t.id}`} label="log" onPress={async () => {
+                    await update($, viewing, () => t.id);
+                    await $.ui.open({ id: PANE, title: 'Task logs' });
+                }}/>);
+            const tag = gallery ? <Text dimColor>{style} </Text> : null; // TEMP: which style this row is
+            if (style === 'b') {
+                return (<Box key={t.id} flexDirection="column" marginTop={i === 0 ? 0 : 1}>
+            <Box>
+              {tag}
+              <Text color={accent}>{icon} </Text>
+              <Text bold={running} dimColor={!running}>{cut(t.label, labelWidth).padEnd(labelWidth)}  </Text>
+              {bar}
+              <Text bold> {pct}</Text>
+              <Text dimColor>  {cols < 100 || !count ? '' : `${count}  `}{clock(end - t.startedAt)}{cols < 90 || !eta ? '' : `  ${eta}`}{failed ? `  exit ${t.exitCode}` : ''}  </Text>
+              {log}
+            </Box>
+            {(lost || (running && !gallery)) && t.note !== '' && <Text dimColor wrap="truncate-end">  └ {cut(t.note, cols - 6)}</Text>}
+          </Box>);
+            }
+            if (!running) {
+                return (<Text key={t.id} dimColor wrap="truncate-end">
+            {tag}<Text color={accent}>{icon}</Text> {cut(t.label, cols - 24)} · {clock(end - t.startedAt)}{failed ? ` · exit ${t.exitCode}` : ''}{lost && t.note ? ` · ${t.note}` : ''}
+          </Text>);
+            }
+            const suffix = [clock(end - t.startedAt), cols < 90 ? '' : eta, cols < 100 ? '' : count].filter(Boolean).join(' · ');
+            return (<Box key={t.id} flexDirection="column">
+          <Box>
+            {tag}
+            <Text color={accent}>{icon} </Text>
+            <Text>{cut(t.label, labelWidth).padEnd(labelWidth)}  </Text>
+            {bar}
+            <Text> {pct}</Text>
+            <Text dimColor> ({suffix})  </Text>
+            {log}
+          </Box>
+          {t.note !== '' && <Text dimColor wrap="truncate-end">  ⎿  {cut(t.note, cols - 6)}</Text>}
+        </Box>);
+        };
+        const band = (style) => style === 'b'
+            ? <Box key={style} flexDirection="column" borderStyle="round" borderColor="#444a55" paddingX={1}>{shown.map((t, i) => row(t, i, style))}</Box>
+            : <Box key={style} flexDirection="column">{shown.map((t, i) => row(t, i, style))}</Box>;
+        if (!gallery)
+            return <Box flexDirection="column" marginTop={1}>{band('b')}</Box>;
+        return (<Box flexDirection="column" marginTop={1}>
+        {Object.keys(STYLES).map(s => (<Box key={`g-${s}`} flexDirection="column">{band(s)}</Box>))}
+      </Box>);
+    });
+    on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+        const { Box, Button, Text } = $.ui.resolve(e);
+        const list = await read($, tasks);
+        const id = await read($, viewing);
+        const t = list.find(x => x.id === id) ?? list.at(-1);
+        const cols = e.props.bodyColumns ?? 80;
+        const room = Math.max(3, (e.viewport?.rows ?? 24) - 6);
+        return (<Box flexDirection="column">
+        <Box flexWrap="wrap">
+          {list.slice(-6).map(x => (<Button key={`pick-${x.id}`} variant={x.id === t?.id ? 'primary' : undefined} onPress={() => update($, viewing, () => x.id)}>
+              {cut(x.label, 18)}{x.endedAt === null ? ' …' : x.exitCode === 0 ? ' ✓' : ' ✗'}
+            </Button>))}
+        </Box>
+        {t === undefined && <Text dimColor>No background tasks yet.</Text>}
+        {t !== undefined && t.path === null && <Text dimColor>Output file not found for {t.id}.</Text>}
+        {t !== undefined && t.tail.length === 0 && t.path !== null && <Text dimColor>(no output yet)</Text>}
+        {t !== undefined && t.tail.slice(-room).map((line, i) => (<Text key={`l${i}`} dimColor={t.endedAt !== null} color={/error|traceback|exception|failed/i.test(line) ? '#ff6b6b' : /warn/i.test(line) ? '#e5c07b' : undefined}>
+            {cut(line, cols)}
+          </Text>))}
+      </Box>);
+    });
+};

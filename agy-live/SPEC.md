@@ -73,3 +73,23 @@ Two chats overwrote each other's `delegar-live.log`, and one run's footer stoppe
 - **Verified 2026-11-09 14:35:** a window-only capture (`winshots.ps1`, session window, bottom 38 %) during a lone `-Tag bandtest2` Flash-high run showed the full band («Composing… (1m 5s · ↓ 8.7k tokens · thinking some more)» + «└ Reading hooks.json · done») under Claude's own spinner; the mod hot-reloaded without a restart. `claude plugin validate` passes (icon/licence warnings only).
 - **Not yet verified:** two overlapping tagged runs (one on the band, one as a side line), and why no side line was ever seen for `-Tag lead` before this change (log file name and session id matched, cause unknown).
 - **Side line verified 2026-11-09 (window capture, two overlapping `-Tag` runs):** the first run drew the full blue band («Working… (19s · ↓ 1.2k tokens · thinking)» + «└ Running Get-ChildItem -Force · done») and the second a dim line under it («✦ sideB · 17s · Running Get-ChildItem -Force · done»). So the side line works; why `-Tag lead` showed nothing before the change stays unexplained, most likely because it ran alone and the old code drew only the dim line, which Lucas may have missed.
+
+## 2026-11-12 — re-read against Claude Code 2.1.322 (binary dated 2026-11-10)
+
+Spinner code located by string literals (`still thinking`, `ran tool for`, `rgb(171,43,63)`, the `\xB7 ✢ …` glyph frames) and read in place; minified names below are from that build.
+
+**Unchanged since the 2026-11-05 read:** glyph frames and the 2 s cosine formula (`l3e`, `Hn=2000`); re-render interval 50/100 ms; sweep 50 ms/char left→right while requesting, 200 ms/char right→left otherwise, 10 chars of padding; tool-use pulse `(sin(t/1000·π)+1)/2` in 1/8 steps; stall (10 s → 20 s toward `{171,43,63}`, eased 10 %/50 ms, `error` above 0.5); thinking intensity and bold at ≥ 0.5; token counter steps and the 2000-char snap; 16 s timer threshold; thinking ladder (10/20/30/45 s); grey pulse 153→185 after 3 s; suffix order (suffix · time · arrow+tokens · status); the 187 gerunds and 8 past verbs (lists compared programmatically, identical).
+
+**Deltas found and applied:**
+- **Effort suffix:** the thinking label is `${ladder word}${effortSuffix}`, the suffix being `` ` with ${effort} effort` `` (`UUt`). When the full text does not fit, Claude falls back to the bare word `thinking`. Applied: the effort comes from the log header's `model/effort` field (after the slash, or the level a model name ends in).
+- **`thought for Ns` is transient** (`Xe`): after a thinking burst the label stays `thinking` until 2 s have passed since the burst started, then `thought for Ns` shows for 2 s, then nothing. The band used to keep it until the next status. Applied.
+- **New status kind `recovering`** (`picking the thought back up (n of m)`, shown on output-limit recovery). Not copied: agy has no such event.
+- **`warning` colour confirmed:** the theme table's dark theme (`claude: rgb(215,119,87)`) has `warning: rgb(255,193,7)`, the value the band already used. Which of the six tables is "dark" is inferred from its colours, not from a name.
+- **Reduced motion:** Claude reads `settings.prefersReducedMotion`; the glyph becomes `●` (`DKt`), its colour pulsing between the base and its half-dark over 2 s in 1/8 steps, with no sweep and no tool pulse. Applied through `$.settings.read({ key: 'prefersReducedMotion' })` at the start of a run. Not seen live (the setting is off here).
+
+**Other changes the same day:**
+- **Elapsed time from the header:** the timer counts from the run's own header timestamp, parsed field by field as local time (`headerTime`), so attaching to a run in progress no longer restarts it at 0 and the side lines no longer depend on how `Date.parse` reads a zone-less string.
+- **Chained runs:** after a run ends the band keeps a 1 s watch for 60 s; a new header with no footer in the same log re-arms it. Meant to close the "only the first run of a chained command gets a band" limit; implemented, not seen live.
+- **Not done:** remodelling the `✦ tag` side lines on Claude's own live subagent rows. That code was not located in this read (only the finished row was: `Done (N tool uses · X tokens · time)`), so the side lines stay as they were.
+- Seen live 2026-11-12 (window capture, Flash-high test run): `✱ Germinating… (31s · ↓ 2.0k tokens · still thinking with high effort)` in the warning tint, `⎿  Reading delta.txt · done` under it with the elbow in the same column and glyph as Claude's own `⎿  Tip:` line, then `✻ Sautéed for 37s`. Not seen live: the transient `thought for`, reduced motion, chained runs.
+- Checks: `tsc` over the bundled 2.1.322 types, `claude plugin test` 4/4, `claude plugin validate` (licence/icon warnings only).

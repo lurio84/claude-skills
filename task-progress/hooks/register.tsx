@@ -57,7 +57,10 @@ const clock = (ms: number) => {
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-const SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+const MAX_READ = 4 * 1024 * 1024 // `$.fs.read` rejects a bigger file, and takes no offset to read its end
+// Claude Code's spinner glyphs and their 2 s there-and-back cycle (read from claude.exe 2.1.322, 2026-11-12)
+const GLYPHS = ['·', '✢', '*', '✶', '✻', '✽']
+const glyph = (now: number) => GLYPHS[Math.round(((1 - Math.cos((2 * Math.PI * now) / 2000)) / 2) * (GLYPHS.length - 1))] ?? '·'
 
 /** Progress drawn now: the last parsed value moved on at its average rate, never past the next reported step. */
 function smooth(t: Task, now: number) {
@@ -71,43 +74,32 @@ function smooth(t: Task, now: number) {
 const mix = (a: number[], b: number[], k: number) =>
   '#' + a.map((x, i) => Math.round(x + (b[i]! - x) * k).toString(16).padStart(2, '0')).join('')
 
-const CYAN = [90, 209, 255]
-const VIOLET = [180, 140, 255]
+// White and greys only (Lucas, 2026-11-12: blue is kept for Gemini, so no colour here); red marks a failed task.
+const FILL = [229, 231, 235]
 const TRACK = [58, 64, 75]
-const hex = (c: string) => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16))
+const TRACK_HEX = '#3a404b'
 
 /**
- * One cell per entry, filled (■) or hollow (□) squares. While running, the fill is a cyan-to-violet gradient whose
- * leading square brightens with the fraction of its cell, and a glint travels along the filled part; with no number,
- * a short run of squares sweeps back and forth.
+ * A running task's bar, one cell per entry: ▬ filled, ─ empty, the leading cell brightening with the fraction of
+ * its cell; with no number yet, a short run of ▬ sweeps back and forth.
  */
-function cells(frac: number | null, width: number, now: number, ended: Task['exitCode'] | undefined) {
+function cells(frac: number | null, width: number, now: number) {
   const out: { ch: string; color: string }[] = []
-  const done = ended !== undefined
-  const grad = (i: number) => hex(mix(CYAN, VIOLET, i / width))
-  if (frac === null && !done) {
+  if (frac === null) {
     const pos = (now / 60) % (2 * width)
     const at = pos < width ? pos : 2 * width - pos
     for (let i = 0; i < width; i++) {
       const k = Math.max(0, 1 - Math.abs(i - at) / 2.5)
-      out.push(k > 0 ? { ch: '■', color: mix(TRACK, grad(i), k) } : { ch: '□', color: '#3a404b' })
+      out.push(k > 0 ? { ch: '▬', color: mix(TRACK, FILL, k) } : { ch: '─', color: TRACK_HEX })
     }
     return out
   }
-  const x = (frac ?? 0) * width
+  const x = frac * width
   const full = Math.floor(x)
-  const glint = (now / 45) % (full + 10) // passes the filled part, then rests off the end for a beat
   for (let i = 0; i < width; i++) {
-    if (done) {
-      out.push(i < Math.round(x) ? { ch: '■', color: ended === 0 ? '#58d68d' : '#ff6b6b' } : { ch: '□', color: '#3a404b' })
-    } else if (i < full) {
-      const shine = Math.max(0, 1 - Math.abs(i - glint) / 2)
-      out.push({ ch: '■', color: mix(grad(i), [255, 255, 255], shine * 0.55) })
-    } else if (i === full && x > full) {
-      out.push({ ch: '■', color: mix(TRACK, grad(i), x - full) })
-    } else {
-      out.push({ ch: '□', color: '#3a404b' })
-    }
+    if (i < full) out.push({ ch: '▬', color: mix(TRACK, FILL, 1) })
+    else if (i === full && x > full) out.push({ ch: '▬', color: mix(TRACK, FILL, x - full) })
+    else out.push({ ch: '─', color: TRACK_HEX })
   }
   return out
 }
@@ -169,7 +161,11 @@ export const register: Register = on => {
         try {
           text = await $.fs.read(path)
         } catch {
-          continue // over 4 MiB
+          // A log past the read limit can no longer be followed: say so and let the row go, instead of a bar that
+          // stays frozen for good. Any other failure (the file is being written) is tried again next second.
+          const size = await $.fs.stat(path).then(s => s.size, () => 0)
+          if (size > MAX_READ) fresh[t.id] = { path, found: true, endedAt: now, note: 'log over 4 MiB: no longer followed (the job may still be running)' }
+          continue
         }
         const p = parse(text)
         fresh[t.id] = {
@@ -229,38 +225,47 @@ export const register: Register = on => {
     if (shown.length === 0) return next(e)
 
     const { Box, Button, Text } = $.ui.resolve(e)
-    const cols = (e.props.bodyColumns ?? 80) - 4 // round border + padding
-    const barWidth = Math.max(10, Math.min(32, cols - 62))
+    const cols = e.props.bodyColumns ?? 80
+    const barWidth = Math.max(10, Math.min(32, cols - 66))
+    const labelWidth = Math.min(26, Math.max(...shown.map(t => t.label.length)))
 
+    // Each task follows Claude's own spinner row: its glyph, the bar, a dim "(time · ETA · n/m)" suffix and the
+    // note under ⎿; once the task is done, one dim line.
     return (
-      <Box flexDirection="column" marginTop={1} borderStyle="round" borderColor="#444a55" paddingX={1}>
-        {shown.map((t, i) => {
+      <Box flexDirection="column" marginTop={1}>
+        {shown.map(t => {
           const end = t.endedAt ?? now
-          const running = t.endedAt === null
+          const lost = t.endedAt !== null && t.exitCode === null
+          const failed = t.endedAt !== null && !lost && t.exitCode !== 0
+          if (t.endedAt !== null) {
+            return (
+              <Text key={t.id} dimColor wrap="truncate-end">
+                <Text color={failed ? '#ff6b6b' : undefined}>{lost ? '–' : failed ? '✗' : '✓'}</Text> {cut(t.label, cols - 24)} · {clock(end - t.startedAt)}{failed ? ` · exit ${t.exitCode}` : ''}{lost && t.note ? ` · ${t.note}` : ''}
+              </Text>
+            )
+          }
           const shownFrac = smooth(t, now)
-          const eta = running && t.frac !== null && t.frac > 0.02 && t.frac < 1 && t.changedAt > t.startedAt
-            ? `  ETA ${clock(((t.changedAt - t.startedAt) * (1 - t.frac)) / t.frac - (now - t.changedAt))}` : ''
-          const count = t.total !== null ? `${t.cur}/${t.total}  ` : ''
+          const eta = t.frac !== null && t.frac > 0.02 && t.frac < 1 && t.changedAt > t.startedAt
+            ? `ETA ${clock(((t.changedAt - t.startedAt) * (1 - t.frac)) / t.frac - (now - t.changedAt))}` : ''
+          const count = t.total !== null ? `${t.cur}/${t.total}` : ''
           const pct = shownFrac !== null ? `${String(Math.floor(shownFrac * 100)).padStart(3)}%` : '    '
-          const lost = !running && t.exitCode === null
-          const icon = running ? SPIN[Math.floor(now / 100) % SPIN.length] : lost ? '–' : t.exitCode === 0 ? '✓' : '✗'
-          const accent = running ? '#5ad1ff' : lost ? '#6b7280' : t.exitCode === 0 ? '#58d68d' : '#ff6b6b'
+          const suffix = [clock(end - t.startedAt), cols < 90 ? '' : eta, cols < 100 ? '' : count].filter(Boolean).join(' · ')
           return (
-            <Box key={t.id} flexDirection="column" marginTop={i === 0 ? 0 : 1}>
+            <Box key={t.id} flexDirection="column">
               <Box>
-                <Text color={accent}>{icon} </Text>
-                <Text bold={running} dimColor={!running}>{cut(t.label, 26).padEnd(26)}  </Text>
-                {cells(shownFrac, barWidth, now, running ? undefined : t.exitCode).map((c, k) => (
+                <Text>{glyph(now - t.startedAt)} </Text>
+                <Text>{cut(t.label, labelWidth).padEnd(labelWidth)}  </Text>
+                {cells(shownFrac, barWidth, now).map((c, k) => (
                   <Text key={`c${k}`} color={c.color}>{c.ch}</Text>
                 ))}
-                <Text bold> {pct}</Text>
-                <Text dimColor>  {cols < 100 ? '' : count}{clock(end - t.startedAt)}{cols < 90 ? '' : eta}{running || lost || t.exitCode === 0 ? '' : `  exit ${t.exitCode}`}  </Text>
+                <Text> {pct}</Text>
+                <Text dimColor> ({suffix})  </Text>
                 <Button key={`log-${t.id}`} label="log" onPress={async () => {
                   await update($, viewing, () => t.id)
                   await $.ui.open({ id: PANE, title: 'Task logs' })
                 }} />
               </Box>
-              {t.note !== '' && <Text dimColor>  └ {cut(t.note, cols - 6)}</Text>}
+              {t.note !== '' && <Text dimColor wrap="truncate-end">  ⎿  {cut(t.note, cols - 6)}</Text>}
             </Box>
           )
         })}

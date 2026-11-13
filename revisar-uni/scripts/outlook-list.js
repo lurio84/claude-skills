@@ -5,6 +5,8 @@
 async (page, args) => {
   // outlook.office.com redirects to outlook.cloud.microsoft; on 2026-11-11 two gotos from another site's tab
   // timed out waiting for 'load'/'domcontentloaded', so wait for 'commit' and then for the list
+  // OWA doesn't boot in a hidden tab (visibilityState 'hidden', 2026-11-13), so bring the tab to front first
+  await page.bringToFront().catch(() => {});
   if (!/^https:\/\/outlook\.(office\.com|cloud\.microsoft)\/mail/.test(page.url())) await page.goto('https://outlook.office.com/mail/', { waitUntil: 'commit' });
   try { await page.waitForSelector('[data-convid]', { timeout: 20000 }); }
   catch (e) { return { err: 'no message list (login?)', url: page.url().slice(0, 60) }; }

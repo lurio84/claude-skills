@@ -100,6 +100,7 @@ Read recipes that worked against the real sources (tested 2026-11-11). They run 
 |---|---|---|
 | `ev-course-changes` | `{courseId, cutoff}` (ISO UTC) | announcements, contents (+attachments), gradebook columns changed after cutoff; `{auth:false}` → ask for login |
 | `sharepoint-changed` | `{site, cutoff}` | files of the site's document library modified after cutoff, with editor |
+| `sharepoint-compare` | `{site, pairs: [[a, b], …]}` | per pair `same`/`DIFF`; Office files compared by inner parts (SharePoint copies change the file hash), others by quickXorHash (docx logic ran inline 2026-11-15; the file itself untested) |
 | `outlook-list` | `{pattern, maxText?}` (regex) | matching inbox rows with time and body preview; never opens one (opening marks read) |
 | `whatsapp-read` | `{title, cutoff, maxText?}` (cutoff in local time) | messages of the chat with that exact title since cutoff; checks the header first |
 

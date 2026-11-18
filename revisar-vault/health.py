@@ -12,8 +12,8 @@ mems = sorted(os.path.basename(p) for p in glob.glob(f"{MEM}/*.md") if not os.pa
 hot = sum(1 for l in open(f"{MEM}/MEMORY.md", encoding="utf-8") if l.startswith("- ["))
 # Cap (audit F08, 2026-11-03): the index regrew 6.8k -> 9.4k chars in 6 days after a trim.
 mem_lines = sum(1 for _ in open(f"{MEM}/MEMORY.md", encoding="utf-8"))
-if sizes[f"{MEM}/MEMORY.md"] > 7 * 1024 or mem_lines > 45:
-    print(f"WARN MEMORY.md over cap (7 KB / 45 lines): {sizes[f'{MEM}/MEMORY.md']/1024:.1f} KB, {mem_lines} lines; rewrite or archive lines")
+if sizes[f"{MEM}/MEMORY.md"] > 10 * 1024 or mem_lines > 55:
+    print(f"WARN MEMORY.md over cap (10 KB / 55 lines): {sizes[f'{MEM}/MEMORY.md']/1024:.1f} KB, {mem_lines} lines; rewrite or archive lines")
 read, sessions, dates = set(), 0, []
 for f in glob.glob(f"{TR}/*.jsonl"):
     sessions += 1

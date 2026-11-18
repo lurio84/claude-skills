@@ -37,9 +37,9 @@ Modes don't combine. Lucas's real logged-in Chrome (tower only): copy `Documents
 - `-Dir` = narrowest folder. If it mixes things agy shouldn't see, copy only the allowed files to a scratchpad folder. Long prompts → `-PromptFile`.
 - Ask for a compact answer (table, list or `-Schema` JSON) and **"final answer only"** (otherwise the lead dumps drafts). Give a hard size cap; agy ignores soft limits.
 - Read-only tasks: tell agy not to use shell commands (`read_file` only); a needless shell call can hang until timeout.
-- Long tasks: `run_in_background`. Lucas watches the `agy-live` band; the full log (`~/.claude/tools/live/<session id>.log`) is for Claude.
+- Long tasks: **`-Background` in a foreground call**, never `run_in_background` (the agy-live mod refuses it). The script runs its checks (a block returns exit 2 at once), detaches itself and returns; when agy ends, the mod sends a prompt with the `.out` path (`~/.claude/tools/live/<session id>[-tag].out`: answer, footer, `##agy-exit N`). Lucas watches the `agy-live` band; the live log is for Claude.
 - **One `delegar.ps1` call per tool call, never after a `Start-Sleep`** (the band attaches only if agy starts within 15 s). To re-attach the band to a running run, run any foreground command containing `delegar.ps1`.
-- Parallel runs from one chat: launch every run except at most one with `-Tag <name>`, each in its own background call.
+- Parallel runs from one chat: launch every run except at most one with `-Tag <name>`, each in its own `-Background` call.
 - While a run is in progress, don't edit files in the vault, claude-config or claude-skills: the git check can't tell your edits from agy's.
 - `invoke_subagent` has ~140k tokens of fixed overhead: use subagents only for heavy branches. A subagent's model is only `inherit|flash|pro`; a Claude/GPT opinion needs its own run.
 

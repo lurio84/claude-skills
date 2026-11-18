@@ -238,17 +238,107 @@ function tagOf(cmd: unknown): string | null {
   return m?.[1] ?? null
 }
 
+// Background runs never become Claude Code background tasks (Lucas, 2026-11-13/18: he wants to see only this band,
+// enforced by the mod, not by a skill rule). delegar.ps1 -Background detaches itself after its checks and returns at
+// once; its output and a last "##agy-exit N" line go to live\<session id>[-tag].out. The mod never rewrites a command
+// (auto mode reviews exactly what runs); it refuses a native background launch, and wakes Claude when an .out ends.
+// Only the file's own last lines count: agy's answer may quote "##agy-exit" or "##agy-woken" (review 2026-11-18).
+function lastLines(text: string): string[] {
+  return text.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '')
+}
+
+export function exitCodeOf(text: string): number | null {
+  const all = lastLines(text)
+  const last = all[all.length - 1] === WOKEN ? all[all.length - 2] : all[all.length - 1]
+  const m = /^##agy-exit (-?\d+)$/.exec(last ?? '')
+  return m ? Number(m[1]) : null
+}
+
+export function isWoken(text: string): boolean {
+  return lastLines(text).at(-1) === WOKEN
+}
+
+const WOKEN = '##agy-woken'
+
+export function isBackground(cmd: unknown): boolean {
+  return typeof cmd === 'string' && /\s-Background(?!:\s*\$false)\b/i.test(cmd)
+}
+
+// An actual delegar.ps1 launch (the script followed by its parameters), not a grep or diff that names the file.
+export function isLaunch(cmd: unknown): boolean {
+  return typeof cmd === 'string' && /delegar\.ps1['"]?\s+-/i.test(cmd)
+}
+
+// Wake poll (survives a mid-run reload, tested 2026-11-18): every 2 s, each .out of this session that has its exit line and no "woken" mark becomes one prompt to
+// Claude, and gets the mark. Stateless (the files are the state), so a mod reload or restart loses nothing.
+let wakePoll: { cancel: () => void } | undefined
+let wakeSince = 0
+let wakeBusy = false
+// A run counts while its .out or its live .log changed this recently (the .out gets no writes until the run ends,
+// the .log does all along), so a long run is never dropped and a crashed one stops being polled.
+const QUIET_MAX_MS = 2 * 3600_000
+
+async function pollWake($: EngineInterface): Promise<void> {
+  if (wakeBusy) return   // a slow tick must not overlap the next one: both could wake the same run
+  wakeBusy = true
+  try { await pollWakeOnce($) } finally { wakeBusy = false }
+}
+
+async function pollWakeOnce($: EngineInterface): Promise<void> {
+  const home = (await $.env.get('USERPROFILE')) ?? ''
+  const dir = `${home}\\.claude\\tools\\live`
+  const sid = await $.session.id()
+  const now = await $.clock.now()
+  let entries: { name: string; kind: string; mtimeMs: number }[] = []
+  try { entries = await $.fs.list(dir) } catch { entries = [] }
+  const mtime = new Map(entries.map(f => [f.name, f.mtimeMs]))
+  let running = 0
+  for (const f of entries) {
+    if (f.kind !== 'file' || !f.name.startsWith(`${sid}`) || !f.name.endsWith('.out')) continue
+    const lastWrite = Math.max(f.mtimeMs, mtime.get(`${f.name.slice(0, -4)}.log`) ?? 0)
+    if (now - lastWrite > QUIET_MAX_MS) continue
+    const path = `${dir}\\${f.name}`
+    let text = ''
+    try { text = String(await $.fs.read(path)).replace(/^﻿/, '') } catch { continue }
+    if (isWoken(text)) continue
+    const code = exitCodeOf(text)
+    if (code === null) { running++; continue }
+    // mark first: a slow submit must never let the next tick send the same wake twice
+    await $.fs.write(path, `${text.replace(/\s*$/, '')}\r\n${WOKEN}\r\n`)
+    void $.prompt.submit({ text: `agy run ${f.name.slice(0, -4)} finished (exit ${code}). Output: ${path} · Log: ${path.slice(0, -4)}.log` })
+  }
+  // stop once nothing is running, but give a just-launched run 20 s to create its .out
+  if (running === 0 && now - wakeSince > 20_000) { wakePoll?.cancel(); wakePoll = undefined }
+}
+
+async function startWake($: EngineInterface): Promise<void> {
+  wakeSince = await $.clock.now()
+  if (!wakePoll) wakePoll = $.clock.every(2000, () => pollWake($))
+}
+
 // One handler for PowerShell and Bash: untagged -> main band; tagged -> main band if nothing else is running, else side line.
 async function onDelegar($: EngineInterface, e: { command?: unknown; run_in_background?: unknown }, next: (e: any) => Promise<any>) {
   if (!isDelegar(e.command)) return next(e)
+  if (e.run_in_background && isLaunch(e.command)) {
+    return { deny: 'agy-live: run delegar.ps1 in the foreground with -Background (it detaches itself; a prompt arrives when it ends), not as a background task.' }
+  }
   const tag = tagOf(e.command)
+  if (isBackground(e.command)) {
+    // The call returns once the checks pass and the child is started; only then start the band's 15 s and the wake's
+    // 20 s clocks, so a slow approval or a slow check can't make them give up before the run exists (review 2026-11-18).
+    const ran = await next(e)
+    await startWake($)
+    if (tag !== null && ((await read($, phase)) === 'running' || (await read($, side)).length > 0)) await startSide($)
+    else await watch($, tag)
+    return ran
+  }
   if (tag !== null && ((await read($, phase)) === 'running' || (await read($, side)).length > 0)) {
     await startSide($)
     return next(e)
   }
   await watch($, tag)
   const ran = await next(e)
-  if (!e.run_in_background) await settle($)
+  await settle($)
   return ran
 }
 
@@ -412,6 +502,8 @@ export const register: Register = on => {
     rearm?.cancel()
     sidePoll?.cancel()
     sidePoll = undefined
+    wakePoll?.cancel()
+    wakePoll = undefined
     await update($, phase, () => 'idle' as Phase)
     await update($, side, () => [])
     return next(e)
@@ -423,6 +515,8 @@ export const register: Register = on => {
     if ((await read($, phase)) === 'running') await update($, phase, () => 'idle' as Phase)
     // Same for tagged side lines: $.state keeps them, but the poll that clears them died with the old module.
     await update($, side, () => [])
+    // Detached runs keep going through a reload or restart; their wake poll died with the old module, so restart it.
+    await startWake($)
     return next(e)
   })
 

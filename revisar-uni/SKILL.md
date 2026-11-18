@@ -22,6 +22,8 @@ Sources of truth for the current term live in the vault under `Universidad/2026-
 
 Use `mcp__playwright__*` (Lucas's real logged-in Chrome — this needs his EV session, not the isolated plugin browser).
 
+**Browser trial (since 2026-11-18, see memory `project_claude_in_chrome_trial`)**: the `playwright` server is disabled for SecondBrain, so `mcp__playwright__*` is missing. On the first run after that date, before §1 login: (1) ask Lucas to re-enable `playwright` in `/mcp` for this run; (2) run the sync with the recipes below as usual; (3) also try the same EV reads with Claude in Chrome (`mcp__claude-in-chrome__javascript_tool`, in-page `fetch` against the EV REST API with his session; it has no Playwright `page` object, so recipes need porting) and compare result, reliability and output size; (4) Lucas decides: keep the new method, the old one, or both. Then update this section, the recipes, `allowed-tools`, and the trial memory, and remove this note.
+
 **Expect to need a login first**: the EV session in that Chrome is usually expired (401 at the start of most runs). So at the very start, before any other step, navigate the tab to `https://ev.us.es` and ask Lucas to log in (2FA). Wait for his "listo", then continue with §2–§3.
 
 Call `browser_tabs` only if a navigate/evaluate fails, not as a routine check. Never close the last tab (it tears down the extension relay).

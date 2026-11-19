@@ -32,6 +32,7 @@ Modes don't combine. Lucas's real logged-in Chrome (tower only): copy `Documents
   - Judgment, synthesis, open multi-source research → **Argon** with `-Solo` (`"Gemini 4 Argon (Low|Medium|High)"`, own small weekly bucket). Never as the verifier of findings: it rubber-stamps.
   - Claude orchestrates every run on one level: no Argon-led subagents. The script's no-`-Model` default (Argon Low + `flash` subagents) is legacy.
   - Flash only as a fallback: it shares Hydrogen's bucket and lost the A/B (Agy-Delegation-Log #68-69).
+  - Effort caps (Lucas, 2026-11-19): Hydrogen any effort; Neon (`gemini-4-neon-low|medium`) and Argon only Low/Medium unless there's a reason and `/usage` was checked. Rule in memory `feedback_agy_modelo_default`.
   - Argon needs its display name (`"Gemini 4 Argon (Low)"`; the slug is rejected in `-p`). Hydrogen and Flash take slugs that carry the effort. `agy models` lists them.
 - `-Effort` is optional; Claude/GPT models reject it. Use Claude/GPT models (separate quota bucket) only for one-off probes. When that bucket says «quota reached» after its reset time, retry once, then drop the run.
 - `-Dir` = narrowest folder. If it mixes things agy shouldn't see, copy only the allowed files to a scratchpad folder. Long prompts → `-PromptFile`.

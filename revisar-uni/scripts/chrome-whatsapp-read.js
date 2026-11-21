@@ -16,6 +16,7 @@ if (!pane) 'no chat list (login/QR?)'; else {
 const CUTOFF = new Date(2026, 10, 19, 0, 0);   // local time, month 0-based
 const sleep = ms => new Promise(r => setTimeout(r, ms)); await sleep(2000);
 const h = document.querySelector('#main header'); const head = h ? h.innerText.split('\n')[0].trim() : null;
+// 2026-11-21: the sidebar can shift between step 1 and the click (unread badges change) and open the wrong chat; if head !== TITLE, stop here and redo step 1.
 const parse = s => { const m = s.match(/\[(\d{1,2}):(\d{2}), (\d{1,2})\/(\d{1,2})\/(\d{4})\] ([^:]+):/); return m && { ts: new Date(+m[5], +m[4] - 1, +m[3], +m[1], +m[2]), a: m[6].trim() }; };
 const msgs = new Map();
 const collect = () => document.querySelectorAll('#main [data-pre-plain-text]').forEach(n => { const p = n.getAttribute('data-pre-plain-text'); const m = parse(p); if (!m) return; const t = (n.innerText || '').replace(/\s+/g, ' ').trim(); msgs.set(p + t.slice(0, 40), { ...m, t: t.slice(0, 300) }); });

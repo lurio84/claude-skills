@@ -27,3 +27,15 @@ for (let k = 0; k < 5; k++) { const b = [...document.querySelectorAll('#main spa
 msgs.clear(); collect();
 head + '\n' + [...msgs.values()].filter(m => m.ts >= CUTOFF).sort((a, b) => a.ts - b.ts).map(m => `${m.ts.toLocaleString('es-ES')} ${m.a}: ${m.t}`).join('\n');
 */
+
+// 2026-11-22 notes (Claude in Chrome):
+// - getBoundingClientRect coords from step 1 can be wrong for computer clicks (screenshot frame is scaled, e.g. 1568 wide vs innerWidth 1920):
+//   take a scaled screenshot and click the chat row there instead.
+// - Replies embed the quoted message in innerText; for only the reply text use
+//   [...n.querySelectorAll('span.selectable-text')].map(s=>s.innerText).pop()
+// - Sending a multi-line message: focus '#main footer [contenteditable="true"]', then
+//   const dt=new DataTransfer(); dt.setData('text/plain', text); box.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
+//   check box.innerText, screenshot, then real computer click on the send button. Only after Lucas's OK for that text.
+// - To clear a draft, execCommand('selectAll'/'delete') does NOT work; use computer key "ctrl+a Delete" with the box focused.
+// - Check the header is the right chat and re-read the chat for new messages right before sending.
+// - SharePoint REST (sharepoint-changed.js logic) also runs inline via javascript_tool on a tab at the site URL (same-origin fetch of /_api/v2.0/drive).

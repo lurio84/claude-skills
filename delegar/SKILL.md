@@ -25,16 +25,18 @@ Modes don't combine. Browsing defaults to an isolated browser (Lucas, 2026-11-20
 
 ## How
 ```powershell
-& "$HOME\.claude\tools\delegar.ps1" -Dir <folder> -Prompt "<task>" [-PromptFile <file>] -Model gemini-4-hydrogen-medium|"Gemini 4 Argon (Low)"|… [-Solo] [-Effort low|medium|high] [-Timeout 10m] [-Schema <json>] [-Tag <name>] [-Web|-Write|-Full]
+& "$HOME\.claude\tools\delegar.ps1" -Dir <folder> -Prompt "<task>" [-PromptFile <file>] -Model gemini-4-hydrogen-medium|gemini-4-neon-medium|… [-Solo] [-Effort low|medium|high] [-Timeout 10m] [-Schema <json>] [-Tag <name>] [-Web|-Write|-Full]
 ```
-- **Model: pick it per task and per quota, always pass `-Model` (Lucas, 2026-11-14).** Read `/usage` before a batch.
-  - Extraction, per-document checks, first-pass review → **Hydrogen** (`gemini-4-hydrogen-{low,medium,high,xhigh}`, Gemini bucket, run directly). Medium is the usual pick; Low for small plain lookups; High/XHigh for high-recall review when the Gemini bucket is roomy.
-  - Judgment, synthesis, open multi-source research → **Argon** with `-Solo` (`"Gemini 4 Argon (Low|Medium|High)"`, own small weekly bucket). Never as the verifier of findings: it rubber-stamps.
-  - Claude orchestrates every run on one level: no Argon-led subagents. The script's no-`-Model` default (Argon Low + `flash` subagents) is legacy.
-  - Flash only as a fallback: it shares Hydrogen's bucket and lost the A/B (Agy-Delegation-Log #68-69).
-  - Effort caps (Lucas, 2026-11-19): Hydrogen any effort; Neon (`gemini-4-neon-low|medium`) and Argon only Low/Medium unless there's a reason and `/usage` was checked. Rule in memory `feedback_agy_modelo_default`.
-  - Argon needs its display name (`"Gemini 4 Argon (Low)"`; the slug is rejected in `-p`). Hydrogen and Flash take slugs that carry the effort. `agy models` lists them.
-- `-Effort` is optional; Claude/GPT models reject it. Use Claude/GPT models (separate quota bucket) only for one-off probes. When that bucket says «quota reached» after its reset time, retry once, then drop the run.
+- **Model: routing table (Lucas, 2026-11-24, from benchmarks + quota cost in vault `Agy-Models-Map`). Always pass `-Model`; read `/usage` before a batch.** Cost = relative to Hydrogen Medium, all in the shared Gemini bucket.
+  - Trivial lookup/list/format → `gemini-4-hydrogen-low` (0.4×, ≈ Haiku).
+  - Extraction, sweeps (**default**) → `gemini-4-hydrogen-medium` (1×, ≈ Sonnet High).
+  - First-pass review, extraction needing judgment → `gemini-4-hydrogen-high` (2×, ≈ Opus High).
+  - Judgment, synthesis, multi-source research → `gemini-4-neon-medium` with `-Solo` (2.3×, ≈ Sonnet Max).
+  - Hard cases where Neon Medium fell short → `gemini-4-neon-high` with `-Solo`, `/usage` checked first (4.5×, ≈ Opus Max).
+  - Verifying findings → Opus (Claude subagent, or Opus 5.5 in agy on the small 3p bucket), never a Gemini self-check.
+  - Not used: Hydrogen XHigh, Neon XHigh, Carbon (dominated on cost/score), Argon and Flash 3.8 (removed 2026-11-30).
+  - Claude orchestrates every run on one level: no Gemini-led subagents. The script's no-`-Model` default is `gemini-4-hydrogen-medium` (since 2026-11-24). `-Solo` is a no-op for Neon (the lead preamble fires only on Argon), kept for clarity.
+- `-Effort` is optional; Claude/GPT models reject it. Use Claude/GPT models (separate small quota bucket) only for probes and verification runs. When that bucket says «quota reached» after its reset time, retry once, then drop the run.
 - `-Dir` = narrowest folder. If it mixes things agy shouldn't see, copy only the allowed files to a scratchpad folder. Long prompts → `-PromptFile`.
 - Ask for a compact answer (table, list or `-Schema` JSON) and **"final answer only"** (otherwise the lead dumps drafts). Give a hard size cap; agy ignores soft limits.
 - Read-only tasks: tell agy not to use shell commands (`read_file` only); a needless shell call can hang until timeout.
@@ -42,7 +44,7 @@ Modes don't combine. Browsing defaults to an isolated browser (Lucas, 2026-11-20
 - **One `delegar.ps1` call per tool call, never after a `Start-Sleep`** (the band attaches only if agy starts within 15 s). To re-attach the band to a running run, run any foreground command containing `delegar.ps1`.
 - Parallel runs from one chat: launch every run except at most one with `-Tag <name>`, each in its own `-Background` call.
 - While a run is in progress, don't edit files in the vault, claude-config or claude-skills: the git check can't tell your edits from agy's.
-- `invoke_subagent` has ~140k tokens of fixed overhead: use subagents only for heavy branches. A subagent's model is only `inherit|flash|pro`; a Claude/GPT opinion needs its own run.
+- `invoke_subagent` has ~140k tokens of fixed overhead: use subagents only for heavy branches. A subagent's model is only `inherit|flash|pro` (re-check what `flash` maps to after Flash 3.8 leaves on 11-30); a Claude/GPT opinion needs its own run.
 
 ## Patterns
 - **Research:** 2 independent runs, same prompt, fixed JSON schema with claim ids and verbatim quotes from one official domain. A script diffs the runs and checks each quote on the cited page (template `Documents/agy-outputs/2026-11-05/verify-boe-quotes.js`). Claude reads only the disagreements, and greps one-run-only items before merging.
@@ -52,7 +54,7 @@ Modes don't combine. Browsing defaults to an isolated browser (Lucas, 2026-11-20
 ## Reading the result
 - Exit 0 = usable. 3 = failed/empty: retry once with a simpler prompt, else do it in Claude. 5 = a watched repo changed and agy could have done it; first check whether the listed files are ones you or another chat edited (memory lives in claude-config). Alert Lucas only if a change is unexplained. The footer lists changed paths even on exit 0, labelled as another chat or a sync when agy used no write-capable tool. 2 = blocked by the script (never-send list or wrong `-Dir`).
 - The footer reports tokens, denied actions, agy's error if any, and the conversation id (`agy -p ... --conversation <id>` continues it).
-- **Verify** concrete claims against the source before relying on the output: Flash and Hydrogen 2–3 checks (Hydrogen: Lucas, 2026-11-14, until it has more runs), Argon 1–2. Anything written to the vault or shown to others gets full verification (spot-checks overstate accuracy).
+- **Verify** concrete claims against the source before relying on the output: Hydrogen 2–3 checks (Lucas, 2026-11-14, until it has more runs), Neon 1–2. Anything written to the vault or shown to others gets full verification (spot-checks overstate accuracy).
 - **Extraction runs:** ask for `count`, oldest and newest item per source in the schema and check those edges. Spot-checks confirm what came back, not what's missing.
 - **A timed-out or partial extraction is discarded and relaunched narrower** (one source per run, ready-made scripts). Never resume it asking for "what you already read": it invents verbatim text.
 - Template-driven writing: grep every quoted phrase against the source and read any self-reported "process" section in full; Flash fills every slot, inventing content if needed.

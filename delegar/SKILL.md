@@ -1,6 +1,6 @@
 ---
 name: delegar
-description: Delegate token-heavy work (folder sweeps, summaries of many files/PDFs/repos, first-pass reviews, web page reading; edits only in a reviewed worktree) to Antigravity CLI (agy) so it spends Google AI Pro quota instead of Claude's. Use proactively when a task would otherwise go to an Explore/general-purpose subagent and only its conclusion matters, or when the user says "delega", "pásaselo a agy/Gemini".
+description: Delegate token-heavy work (folder sweeps, summaries of many files/PDFs/repos, first-pass reviews, web page reading; vault edits via -Vault, committed as author agy; other edits in a reviewed worktree) to Antigravity CLI (agy) so it spends Google AI Pro quota instead of Claude's. Use proactively when a task would otherwise go to an Explore/general-purpose subagent and only its conclusion matters, or when the user says "delega", "pásaselo a agy/Gemini".
 ---
 
 # Delegar (agy)
@@ -9,7 +9,8 @@ Runs `~/.claude/tools/delegar.ps1` (private claude-config repo, with the never-s
 
 ## When
 - **Delegate:** reading/summarizing many files, inventories, "find where X is", first-pass review of a repo or document set, extracting facts into a table.
-- **Keep in Claude:** direct writes to the vault/memory/repos, judgment calls, finance, outward actions, and anything under the never-send list (`~/.claude`, `~/.ssh`; the script exits 2 — don't work around it, ask Lucas). Exception: rules and memories from `~/.claude` may go out as a filtered scratchpad copy (no settings, `.env` or credentials) that passes `mcp__plugin-authoring__scan_secrets`.
+- **Vault edits can go to agy** (`-Vault`, since 2026-11-24, Lucas): notes, sweeps that fix many notes, drafts. Its hooks commit each file as author `agy`, so its work stays traceable. Claude reviews the agy commits listed in the footer (`git show <hash>`) before telling Lucas it's done.
+- **Keep in Claude:** memory and repos other than the vault, judgment calls, finance, outward actions, and anything under the never-send list (`~/.claude`, `~/.ssh`; the script exits 2 — don't work around it, ask Lucas). Exception: rules and memories from `~/.claude` may go out as a filtered scratchpad copy (no settings, `.env` or credentials) that passes `mcp__plugin-authoring__scan_secrets`.
 - Let agy do the work itself: it converts formats on its own (PDF natively, `.docx` via `python-docx`). Claude only writes the prompt and picks which files it sees. Don't add restrictions "just in case": check the official Antigravity docs or ask Lucas.
 - Not for animation QA: Flash reads a local video's content (speech, on-screen text) but misses brief motion and passes defects as clean.
 
@@ -19,6 +20,7 @@ Runs `~/.claude/tools/delegar.ps1` (private claude-config repo, with the never-s
 | default | read-only (sandbox + `write_file` deny) | `search_web` gives snippets only; no URL fetch |
 | `-Web` | fetch full pages (`curl.exe -sL <url>`) | `-Dir` must be an **empty** fresh scratchpad folder (exit 2 otherwise); anything appearing in it → exit 5. Sandbox off + auto mode: shell can write anywhere, only the git/empty-dir checks notice |
 | `-Write` | edits | `-Dir` in a git repo → new worktree from `HEAD` (branch `agy/<time>`, uncommitted changes absent); under `%TEMP%` → in place; else exit 2. Only agy's `write_file` can write: binary output (`.docx`, `.xlsx`) needs `-Full`. Claude reviews the diff, runs tests, merges, removes worktree + branch (footer prints the commands). Never on the vault/memory |
+| `-Vault` | edits in the real vault | `-Dir` anywhere in the vault (the script uses the vault root so agy loads `AGENTS.md` and `.agents/hooks.json`). `agy-vault.json` denies git commit/push/reset/checkout and writes to `.claude`, `.gemini`, `.agents`, `.git`. The hooks commit agy's files as author `agy` with trailers `Agy-Model`, `Agy-Launcher: claude`; already-dirty files it touched stay uncommitted (`Touched-Dirty:`). Exit 5 = something to review (`Touched-Dirty`/`Unlogged` trailers, or a config repo changed). Don't edit the same notes while it runs. Undo: `git revert <hash>` |
 | `-Full` | builds that install packages, browse, self-verify | `-Dir` under `%TEMP%`; no sandbox. Snapshot of the 3 watched repos first; undo with `delegar-revert.ps1 -Snapshot <file>` (dry run) → `-Apply` (restores tracked files, also undoes others' later edits: review the list; can't see edits to files that were already untracked) / `-DeleteNew` |
 
 Modes don't combine. Browsing defaults to an isolated browser (Lucas, 2026-11-20). Use his real logged-in Chrome only when the task needs his session, and tell him before launching, because he must accept the extension's connection prompt or the MCP times out. Real Chrome (tower only): copy `Documents/agy-outputs/agy-chrome-mcp_config.json` to `<Dir>/.agents/mcp_config.json`, run with `-Full` (or `-Web`; its `.playwright-mcp/` logs trip a harmless exit 5), and tell agy to use the MCP server "playwright" tools (`browser_navigate`…), not its built-in browser. For pages Claude already has a recipe for (WhatsApp Web), reading them with Claude's own `browser_evaluate` is cheaper.
@@ -34,6 +36,7 @@ Modes don't combine. Browsing defaults to an isolated browser (Lucas, 2026-11-20
   - Judgment, synthesis, multi-source research → `gemini-4-neon-medium` with `-Solo` (2.3×, ≈ Sonnet Max).
   - Hard cases where Neon Medium fell short → `gemini-4-neon-high` with `-Solo`, `/usage` checked first (4.5×, ≈ Opus Max).
   - Verifying findings → Opus (Claude subagent, or Opus 5.5 in agy on the small 3p bucket), never a Gemini self-check.
+  - **Opus 5.5 in agy, opportunistic (Lucas, 2026-11-24):** before a judgment or verification run, read `agy -p "/usage" --output-format json`. If the `3p-weekly` bucket has room, and especially if it resets within ~2 days with quota unused, use `claude-opus-5-5-medium` (or `-high` for hard cases) instead of Neon. Otherwise Neon. Lucas won't track it: Claude does. One ~350k-token Opus run empties the 3p 5-hour bucket (2026-11-13), so keep Opus runs small.
   - Not used: Hydrogen XHigh, Neon XHigh, Carbon (dominated on cost/score), Argon and Flash 3.8 (removed 2026-11-30).
   - Claude orchestrates every run on one level: no Gemini-led subagents. The script's no-`-Model` default is `gemini-4-hydrogen-medium` (since 2026-11-24). `-Solo` is a no-op for Neon (the lead preamble fires only on Argon), kept for clarity.
 - `-Effort` is optional; Claude/GPT models reject it. Use Claude/GPT models (separate small quota bucket) only for probes and verification runs. When that bucket says «quota reached» after its reset time, retry once, then drop the run.

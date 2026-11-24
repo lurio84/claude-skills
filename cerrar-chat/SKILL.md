@@ -29,6 +29,7 @@ Vault rules (`C:\Users\lucas\SecondBrain`):
 ### 3. Update memory
 Only if an active project changed state or new feedback came up. Edit the existing file in `memory/` (don't duplicate) and adjust its pointer in `MEMORY.md`. If nothing changed at that level, don't touch memory.
 - **Replace, don't append.** Rewrite the file's current-state lines. Never add a dated "Update …" section: the session log goes to the vault. Vault hubs work the same way: a hub holds current state, and dated logs go to the topic's `-Historico` note (or a dated `_archivo/` note). Index lines get the same treatment: rewrite the line, don't chain dated clauses onto it. (2026-10-24: a project memory grew from 13 to 39 KB through appended updates.)
+- **agy proposals.** If `Inbox/agy-propuestas-memoria.md` exists in the vault, treat each entry as a candidate (agy can't write memory). Check its source; save the ones that hold, under the usual rules; ask Lucas about any you can't verify. Then remove the handled entries from the file, or delete it if empty.
 - A new memory goes to the hot index only if it passes the split rule at the top of `MEMORY.md`. Domain-gated references go to `MEMORY-archivo.md`.
 
 ### 4. Wikilink check (notes touched today)

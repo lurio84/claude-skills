@@ -33,29 +33,27 @@ const open = `${HEAD}\n[tool] read_file a.txt\n`
 const done = `${HEAD}\n----- SUCCESS | git changed False\n`
 
 test('the log name decides untagged or tagged; other sessions are ignored', async () => {
-  expect(candidateOf(`${SID}.log`, SID, open, NOW - 1000, '', NOW)?.tag).toBe(null)
-  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 1000, '', NOW)?.tag).toBe('x')
-  expect(candidateOf(`${SID}-a-b.log`, SID, open, NOW - 1000, '', NOW)?.tag).toBe('a-b')
+  expect(candidateOf(`${SID}.log`, SID, open, NOW - 1000, NOW)?.tag).toBe(null)
+  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 1000, NOW)?.tag).toBe('x')
+  expect(candidateOf(`${SID}-a-b.log`, SID, open, NOW - 1000, NOW)?.tag).toBe('a-b')
   // another session whose id starts with ours
-  expect(candidateOf(`${SID}zzz.log`, SID, open, NOW - 1000, '', NOW)).toBe(undefined)
-  expect(candidateOf(`${SID}zzz-x.log`, SID, open, NOW - 1000, '', NOW)).toBe(undefined)
-  expect(candidateOf(`${SID}-x.out`, SID, open, NOW - 1000, '', NOW)).toBe(undefined)
+  expect(candidateOf(`${SID}zzz.log`, SID, open, NOW - 1000, NOW)).toBe(undefined)
+  expect(candidateOf(`${SID}zzz-x.log`, SID, open, NOW - 1000, NOW)).toBe(undefined)
+  expect(candidateOf(`${SID}-x.out`, SID, open, NOW - 1000, NOW)).toBe(undefined)
 })
 
 test('running means a header and no footer', async () => {
-  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 1000, '', NOW)?.running).toBe(true)
-  expect(candidateOf(`${SID}-x.log`, SID, done, NOW - 1000, '', NOW)?.running).toBe(false)
-  expect(candidateOf(`${SID}-x.log`, SID, '', NOW - 1000, '', NOW)?.running).toBe(false)
+  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 1000, NOW)?.running).toBe(true)
+  expect(candidateOf(`${SID}-x.log`, SID, done, NOW - 1000, NOW)?.running).toBe(false)
+  expect(candidateOf(`${SID}-x.log`, SID, '', NOW - 1000, NOW)?.running).toBe(false)
 })
 
 test('the start is the header time, else the file mtime', async () => {
-  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 1000, '', NOW)?.start).toBe(new Date(2026, 10, 25, 11, 58, 0).getTime())
-  expect(candidateOf(`${SID}-x.log`, SID, 'garbage\n', NOW - 1000, '', NOW)?.start).toBe(NOW - 1000)
+  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 1000, NOW)?.start).toBe(new Date(2026, 10, 25, 11, 58, 0).getTime())
+  expect(candidateOf(`${SID}-x.log`, SID, 'garbage\n', NOW - 1000, NOW)?.start).toBe(NOW - 1000)
 })
 
-test('an exit line in the .out, or ten quiet minutes, means the run is dead', async () => {
-  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 1000, 'answer\n##agy-exit 0\n', NOW)?.running).toBe(false)
-  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 1000, 'answer so far\n', NOW)?.running).toBe(true)
-  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 10 * 60_000, '', NOW)?.running).toBe(true)
-  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 10 * 60_000 - 1, '', NOW)?.running).toBe(false)
+test('ten quiet minutes mean the run is dead', async () => {
+  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 10 * 60_000, NOW)?.running).toBe(true)
+  expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 10 * 60_000 - 1, NOW)?.running).toBe(false)
 })

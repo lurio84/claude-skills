@@ -121,3 +121,9 @@ The backlog item from 2026-11-13: when the band's run ends, the band now passes 
 - **Seen live by Lucas (3 tagged Hydrogen Low runs, t1→t3):** the band started on the oldest run and passed on with no "worked for" line in between.
 - **Not seen live:** the final "worked for" line, the untagged takeover mid-run and the footer race.
 
+
+## 2026-11-25 — MCP tool, detached runs removed
+- **Why:** Lucas wants agy as native as possible and the setup simpler. Claude now calls agy through the MCP tool `mcp__agy__delegate` (`~/.claude/tools/agy_mcp.py`); Claude Code moves a call past two minutes to a native background task and delivers the result as a task notification (code.claude.com/docs/en/mcp.md). Lucas, 2026-11-25: the row he disliked was the task-progress mod's, not Claude Code's own indicator.
+- **Removed:** `delegar.ps1 -Background`, the `.out` wake poll, the deny of `run_in_background` launches and their tests (`detach.test.ts` keeps only `isLaunch`). `candidateOf` no longer reads an `.out`.
+- **Added:** `tool.call` hook for `mcp__agy__delegate`: same band logic as a shell launch (`onRun`), tag taken from the call's `tag` argument. The server inherits `CLAUDE_CODE_SESSION_ID` at spawn, so the live log keeps the session's name; after `/clear` the server keeps the old id (env-vars docs), so the band can miss runs until the server restarts.
+- **Checks:** `claude plugin test` 14/14, `claude plugin validate` passed with warnings (directory-submission ones, pre-existing).

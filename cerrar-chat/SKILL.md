@@ -5,7 +5,7 @@ description: Session closing ritual — persist to vault and memory, check wikil
 
 # Cerrar Chat
 
-Session closing ritual. Runs when Lucas types `/cerrar-chat` or explicitly asks Claude to run it (e.g. "advisor y /cerrar-chat"). Never start it on your own from a vague "cerramos" in prose.
+Session closing ritual. Runs when Lucas types `/cerrar-chat` or explicitly asks Claude to run it (e.g. "advisor y /cerrar-chat", said out of habit: the advisor is off, so this just means the close). Never start it on your own from a vague "cerramos" in prose.
 
 This skill is the single source for the closing ritual (`CLAUDE.md` § "Session closing" points here). The general vault/memory rules it applies live in `feedback_memoria_vault`.
 
@@ -14,7 +14,9 @@ This skill is the single source for the closing ritual (`CLAUDE.md` § "Session 
 ### 1. Session summary
 2-4 bullets of what was actually done in this chat.
 
-If the chat was **trivial** (an ack, a single question already answered, waiting on a third party, copy-paste of something already prepared): say so in one line and jump straight to step 5. Don't run the full ritual over nothing. The "trivial" criterion lives here, not in the trigger.
+**Cost scales with what changed** (Lucas, 2026-11-18: «me gusta cerrar de forma consistente», same ritual every close but cheap when little changed; applied 2026-11-25):
+- **Trivial or no edits:** an ack, a single question already answered, waiting on a third party, copy-paste of something already prepared, or a chat with no file changes (Edit/Write or shell), nothing sent outside, no financial verdict, and nothing worth persisting. Say so in one line and jump straight to step 6. The "trivial" criterion lives here, not in the trigger.
+- **Otherwise:** run steps 2-6, scoped as each step says.
 
 ### 2. Persist to the vault
 Does anything deserve to outlive the chat? — decisions taken, commit hashes, findings, a project changing state. Save it directly in the matching note; don't ask unless where it goes is genuinely ambiguous.
@@ -38,7 +40,10 @@ Run `python -I ~/.claude/tools/refcheck.py --vault --changed`. It checks the vau
 Then one judgment pass on those notes only: if a note literally mentions the exact title of another existing vault note, wrap it in `[[]]` (body only, never frontmatter or code blocks). Nothing to fix → one line, move on.
 
 ### 4b. Re-read pass
-Lucas doesn't want to call the advisor on every close, so do this pass yourself. Don't call the advisor at closing. If the session shipped code, a deploy, a publish, text sent to an external system (form, email, platform post) or a financial action that nothing has reviewed yet, run an `opus` subagent review of the diff, the verdict or the sent text first and triage its findings (advisor OFF trial since 2026-11-12, memory `project_advisor_off_trial`). Re-read the files from disk; don't rely on what you remember writing. Scope: every file you edited this session according to your own Edit/Write calls, not only what `git status` shows, because a sync earlier in the session already committed some of them. Add the hub of every topic whose state changed this session, even if you didn't edit that hub.
+The advisor is off for good (2026-11-25, memory `project_advisor_off_trial`), so do this pass yourself.
+- **Opus review, only when it applies:** the session shipped code, a deploy, a publish, text sent to an external system (form, email, platform post), a financial action or verdict, and nothing has reviewed it yet. In that case run an `opus` subagent review of the diff, the verdict or the sent text first, and triage its findings. Otherwise no subagent.
+- **Re-read scope:** only the files that hold rules or state, i.e. memory files, `MEMORY.md`, hubs and state sections, skills, `CLAUDE.md`/`AGENTS.md`, hooks and settings. Take them from your own Edit/Write calls and shell edits this session, not only from `git status`, because a sync earlier in the session already committed some of them. Add the hub of every topic whose state changed this session, even if you didn't edit that hub. Plain content notes (study material, research write-ups) skip the state-section check, but the **Claims** bullet below still applies to them.
+- Re-read the files from disk; don't rely on what you remember writing.
 - **State sections.** Read each hub's "Estado" or current-state section and each edited memory's state lines. Every line must be true *now*, and its date or "as of" header must be updated. If a memory and its hub both state the same thing, the hub is the source: cut the memory line down to a pointer.
 - **Temporary source files.** Grep those notes for `Downloads`, `AppData\Local\Temp` and `scratchpad`. If a note cites a file there as a source, copy it to a permanent place (the subject's OneDrive folder or the vault) and repoint the note.
 - **Claims written this session**, in files or in text sent to external systems. Each claim needs the source it was read from. If you saw it only in a search-result summary or recalled it from memory, mark it as unconfirmed.
@@ -55,7 +60,7 @@ As the final step, persist to remote by running the sync script (no hook does th
 powershell -ExecutionPolicy Bypass -File C:/Users/lucas/.claude/hooks/sync.ps1 -Label "<chat topic>" -Paths "<abs path>;<abs path>"
 ```
 
-`-Label`: 2-5 words naming this chat's topic (no quotes inside). `-Paths`: absolute Windows paths of every file this chat created or edited, from your own Edit/Write calls (vault notes, memory files, skills, hooks), `;`-separated. Files already committed or unchanged are skipped. The script commits them first as `[label]`, then everything else (other open chats) as `[other chats]`, so the history shows which chat did what. On a trivial chat with no edits, run it without parameters.
+`-Label`: 2-5 words naming this chat's topic (no quotes inside). `-Paths`: absolute Windows paths of every file this chat created or edited, from your own Edit/Write calls and shell edits (vault notes, memory files, skills, hooks), `;`-separated. Files already committed or unchanged are skipped. The script commits them first as `[label]`, then everything else (other open chats) as `[other chats]`, so the history shows which chat did what. On a trivial chat with no edits, run it without parameters.
 
 Show the result per repo. If any repo reports `PUSH FAILED` or `sin pushear`, tell Lucas (probably `gh` not logged in as `lurio84`). `COMMIT FAILED` usually means another chat was closing at the same time (`index.lock`): wait a few seconds and run the script again. Don't close declaring success if any repo didn't reach `pushed` / `up to date`.
 

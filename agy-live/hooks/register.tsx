@@ -201,8 +201,9 @@ async function watch($: EngineInterface, tag: string | null = null, handover = f
     await update($, elapsed, shown => Math.max(shown, fromHeader)) // the header is stamped a moment after the launch: never step back
     if (text.length !== lastLength) { lastLength = text.length; lastChangeAt = now }
     if (isNewRun && /\n----- /.test(text)) await stop($, 'done')
-    // past 30 minutes with no footer the band gives up quietly: 'done' with no footer drew a false red "needs a look"
-    else if (seconds > 30 * 60) await stop($, 'idle')
+    // past 60 minutes with no footer the band gives up quietly ('done' with no footer drew a false red "needs a look");
+    // 60, not 30: an MCP call may run 55 min + 4 of grace (review 2026-11-25)
+    else if (seconds > 60 * 60) await stop($, 'idle')
     // A run that was blocked (exit 2) never writes a header: don't leave the band "running". 60 s, not 15: in write
     // mode the header comes after the worktree and the snapshot, which can be slow on a big repo (review 2026-11-25).
     else if (!isNewRun && seconds > 60) await stop($, 'idle')

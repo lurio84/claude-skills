@@ -15,7 +15,7 @@ The MCP tool `mcp__agy__delegate` (server `~/.claude/tools/agy_mcp.py`, user sco
 - Not for animation QA: Flash reads a local video's content (speech, on-screen text) but misses brief motion and passes defects as clean.
 
 ## Modes
-Since 2026-11-25 (Lucas: «sin sandbox, solo denies») no mode has a sandbox: each `agy-<mode>.json` sets `agentMode: ""` (auto would force the sandbox on), `enableTerminalSandbox: false`, `toolPermission: always-proceed`. Only deny rules restrict agy: git writes, dot-folders (`.claude .gemini .ssh .agents .git .obsidian`), credential reads.
+Since 2026-11-25 (Lucas: «sin sandbox, solo denies») no mode has a sandbox: each `agy-<mode>.json` sets `agentMode: ""` (auto would force the sandbox on), `enableTerminalSandbox: false`, `toolPermission: always-proceed`. Only deny rules restrict agy: git writes, dot-folders in commands (`.claude .ssh .agents .git .obsidian`; `~/.gemini` only against `write_file`, since agy rereads its own step outputs there), credential reads.
 
 | mode | Use | Constraints |
 |---|---|---|

@@ -522,9 +522,11 @@ export const register: Register = on => {
 
   on('tool.call', { tool: 'Bash' }, ($, e, next) => onDelegar($, e, next))
 
-  on('tool.call', { tool: 'mcp__agy__delegate' }, ($, e, next) => {
-    const tag = (e as { tag?: unknown }).tag
-    return onRun($, typeof tag === 'string' && tag !== '' ? tag : null, e, next)
+  // No { tool } matcher: with one, the hook never fired for this MCP tool (live check 2026-11-25), so match by name here.
+  on('tool.call', ($, e, next) => {
+    const call = e as { tool?: unknown; tag?: unknown }
+    if (typeof call.tool !== 'string' || !/^mcp__agy__delegate$/.test(call.tool)) return next(e)
+    return onRun($, typeof call.tag === 'string' && call.tag !== '' ? call.tag : null, e, next)
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

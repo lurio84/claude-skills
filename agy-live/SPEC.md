@@ -106,3 +106,18 @@ Spinner code located by string literals (`still thinking`, `ran tool for`, `rgb(
 - **Rejected first version:** the mod rewrote the background call into a `Start-Process` of a launcher. Auto mode refuses an input a hook changed after review, so every launch needed a re-issue.
 - **Verified live 2026-11-18:** the band showed with no native task (Lucas); single run woke with the right answer; deny of a background call; blocked `-Background` run returned exit 2 at once; two `-Tag` runs → two wakes across a mid-run reload. tsc, `plugin validate`, `plugin test` 5/5.
 - **Review fixes (opus reviewer, same day):** `-PromptFile` + `-Background` dumped Get-Content's PSPath notes into the job (3.8 MB; now `"$Prompt"`, 317 B); wake markers count only as the `.out`'s last lines (agy's answer may quote them); the band/wake clocks start after the call returns; a launch is refused (exit 2) while a same-name `.out` is unwoken and written within 2 h; runs stay polled while their `.log` changes (no 2 h drop); ticks never overlap; only a real launch (`delegar.ps1 -…`) is denied in the background, and `-Background:$false` is a normal run. Not fixed: runs started before `/clear` get no wake (the `.out` stays readable). Re-verified live: prompt-file run woke with `4711`, same-name launch blocked. `plugin test` 7/7.
+
+## Band handover (2026-11-25)
+
+The backlog item from 2026-11-13: when the band's run ends, the band now passes to a run that is still in progress instead of leaving only side lines.
+- **Order:** an untagged run comes first, then the oldest tagged run, by log-header start time with file mtime as fallback. The pure functions are `chooseBandRun` and `candidateOf`, tested in `hooks/band.test.ts`.
+- **Fixes from the opus review the same day:**
+  - A chained untagged run takes the band from a tagged one: the tick scans while `bandTag` is set, which costs a directory scan every 500 ms while the band is on a tagged run.
+  - The side poll restarts on handover.
+  - A run counts as dead when its `.out` has an exit line or its log has been quiet for 10 minutes.
+  - A footer race now ends through the normal `done` path.
+  - The new band run's side row is dropped at once.
+- **Tests:** 16/16 pass (`claude plugin test .`); no type-check, since tsc isn't installed.
+- **Seen live by Lucas (3 tagged Hydrogen Low runs, t1→t3):** the band started on the oldest run and passed on with no "worked for" line in between.
+- **Not seen live:** the final "worked for" line, the untagged takeover mid-run and the footer race.
+

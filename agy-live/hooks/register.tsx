@@ -98,11 +98,21 @@ async function load($: EngineInterface): Promise<string> {
   return text
 }
 
-async function watch($: EngineInterface, tag: string | null = null): Promise<void> {
+async function watch($: EngineInterface, tag: string | null = null, handover = false): Promise<void> {
   // A later command that only mentions delegar.ps1 (a grep, a cat) must not reset a band that is already running.
   if ((await read($, phase)) === 'running') return
   bandTag = tag
+  // the band's run no longer needs its side row (the side poll would take up to a second to drop it)
+  if (tag !== null) await update($, side, rs => rs.filter(r => r.tag !== tag))
   const current = (await load($)).replace(/^﻿/, '')
+  // Handover race: the run chosen by stop() wrote its footer between the scan and now. Run the normal end path on it.
+  if (handover && current.startsWith('=====') && /\n----- /.test(current)) {
+    const began = headerTime(current.split(/\r?\n/)[0])
+    const at = await $.clock.now()
+    await update($, elapsed, () => (began !== null && began <= at ? Math.round((at - began) / 1000) : 0))
+    pastVerb = PAST_VERBS[Math.floor(Math.random() * PAST_VERBS.length)] ?? 'Worked'
+    return stop($, 'done')
+  }
   // A log with a header but no footer is a run already in progress: attach to it instead of waiting for a new one.
   const inProgress = current.startsWith('=====') && !/\n----- /.test(current)
   const before = inProgress ? undefined : current.split(/\r?\n/)[0]
@@ -166,6 +176,13 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
   tick = $.clock.every(500, async () => {
     const text = await load($)
     const now = await $.clock.now()
+    // While the band follows a tagged run, a new untagged run (e.g. chained after one that ended) takes the band;
+    // the tagged run goes on as a side line.
+    if (bandTag !== null && (await scanRuns($)).some(r => r.tag === null && r.running)) {
+      await stop($, 'idle')
+      await startSide($)
+      return watch($, null)
+    }
     const seconds = Math.round((now - startedAt) / 1000)
     const header = text.replace(/^﻿/, '').split(/\r?\n/)[0]
     const isNewRun = header !== before
@@ -191,12 +208,68 @@ async function watch($: EngineInterface, tag: string | null = null): Promise<voi
   })
 }
 
+// Which run the main band follows (backlog 2026-11-13): an untagged run in progress (tag null) first, else the OLDEST
+// tagged run in progress, else none (undefined). Oldest by start time, which the caller takes from the run's log
+// header: the log's mtime moves with every write, so it would reorder runs as they print.
+export type BandCandidate = { tag: string | null; start: number; running: boolean }
+
+export function chooseBandRun(runs: BandCandidate[]): string | null | undefined {
+  const live = runs.filter(r => r.running)
+  const untagged = live.find(r => r.tag === null)
+  if (untagged) return null
+  const tagged = live.filter(r => r.tag !== null).sort((a, b) => a.start - b.start)
+  return tagged[0]?.tag ?? undefined
+}
+
+// The runs of this session as the band sees them: <id>.log (untagged) and <id>-<tag>.log, in progress = header, no footer.
+async function scanRuns($: EngineInterface): Promise<BandCandidate[]> {
+  const home = (await $.env.get('USERPROFILE')) ?? ''
+  const dir = `${home}\\.claude\\tools\\live`
+  const sid = await $.session.id()
+  const now = await $.clock.now()
+  let entries: { name: string; kind: string; mtimeMs: number }[] = []
+  try { entries = await $.fs.list(dir) } catch { entries = [] }
+  const runs: BandCandidate[] = []
+  for (const f of entries) {
+    if (f.kind !== 'file' || !f.name.endsWith('.log') || !f.name.startsWith(sid) || now - f.mtimeMs > 2 * 3600_000) continue
+    let text = ''
+    try { text = String(await $.fs.read(`${dir}\\${f.name}`)).replace(/^\ufeff/, '') } catch { continue }
+    let outText = ''
+    try { outText = String(await $.fs.read(`${dir}\\${f.name.slice(0, -4)}.out`)).replace(/^\ufeff/, '') } catch { outText = '' }
+    const c = candidateOf(f.name, sid, text, f.mtimeMs, outText, now)
+    if (c) runs.push(c)
+  }
+  return runs
+}
+
+// A run is dead when its .out has the exit line, or its log has been quiet this long (the log gets writes all along).
+const CRASHED_QUIET_MS = 10 * 60_000
+
+// One log file of this session as a band candidate: name <sid>.log = untagged, <sid>-<tag>.log = tagged, anything
+// else (another session's file, even one whose id starts with ours) = undefined. Running = header, no footer, no
+// exit line in its .out, written within the last 10 minutes. Start = the header's time, else the file's mtime.
+export function candidateOf(name: string, sid: string, text: string, mtimeMs: number, outText: string, now: number): BandCandidate | undefined {
+  if (!name.endsWith('.log')) return undefined
+  const tag = name === `${sid}.log` ? null : name.startsWith(`${sid}-`) ? name.slice(sid.length + 1, -4) : undefined
+  if (tag === undefined || tag === '') return undefined
+  const log = text.replace(/^\ufeff/, '')
+  const running = log.startsWith('=====') && !/\n----- /.test(log) && exitCodeOf(outText) === null && now - mtimeMs <= CRASHED_QUIET_MS
+  return { tag, start: headerTime(log.split(/\r?\n/)[0]) ?? mtimeMs, running }
+}
+
 async function stop($: EngineInterface, to: Phase): Promise<void> {
   tick?.cancel()
   spin?.cancel()
   rearm?.cancel()
   await update($, phase, () => to)
   if (to !== 'done') return
+  // The band's run ended: pass the band on to the next run still in progress (untagged first, then the oldest tagged)
+  // instead of leaving only side lines. With none left, the "worked for" line below shows as always.
+  const next = chooseBandRun(await scanRuns($))
+  if (next !== undefined) {
+    if (next !== bandTag) await startSide($)   // the side poll may have stopped; the run that just ended may chain another
+    return watch($, next, true)
+  }
   // Several delegar.ps1 runs chained in one command: nothing calls watch() for the second, so for a minute
   // after a run ends look for a new header with no footer in the same log, and follow it.
   const finished = (await read($, lines))[0]

@@ -203,8 +203,9 @@ async function watch($: EngineInterface, tag: string | null = null, handover = f
     if (isNewRun && /\n----- /.test(text)) await stop($, 'done')
     // past 30 minutes with no footer the band gives up quietly: 'done' with no footer drew a false red "needs a look"
     else if (seconds > 30 * 60) await stop($, 'idle')
-    // A background run that was blocked (exit 2) never writes a header: don't leave the band "running".
-    else if (!isNewRun && seconds > 15) await stop($, 'idle')
+    // A run that was blocked (exit 2) never writes a header: don't leave the band "running". 60 s, not 15: in write
+    // mode the header comes after the worktree and the snapshot, which can be slow on a big repo (review 2026-11-25).
+    else if (!isNewRun && seconds > 60) await stop($, 'idle')
   })
 }
 

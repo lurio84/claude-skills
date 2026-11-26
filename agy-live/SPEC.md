@@ -132,3 +132,8 @@ The backlog item from 2026-11-13: when the band's run ends, the band now passes 
 - `tools/delegar.ps1` replaced by `tools/agy_run.py` (`python agy_run.py --dir D --prompt-file F [--tag t] …`).
 - Shell-launch detection in `hooks/register.tsx` (`isDelegar`, `isLaunch`, `tagOf`) now matches `agy_run.py` (`--` flags, `--tag <x>`) while keeping legacy `cierre-delegar.ps1` (`-Tag <x>`). MCP `mcp__agy__delegate` detection is unchanged.
 - Done-line status (`footerOk` in `hooks/register.tsx`) now depends only on `SUCCESS` in the footer, ignoring `git changed` (repo changes during a run are informational only, no exit 5).
+
+## 2026-11-26 — live log follows the session after /clear
+- **Bug:** the MCP server kept the CLAUDE_CODE_SESSION_ID it was spawned with, so after `/clear` its live logs carried the old id and neither this band nor the file-tree mod saw agy runs.
+- **Fix (in `~/.claude`, not in this mod):** PreToolUse hook `hooks/agy/session_inject.py` (matcher `mcp__agy__delegate`) writes the current `session_id` to `tools/live/pending/<sha256(tag NUL prompt)[:24]>.sid`; `agy_mcp.py` `_hook_session` reads and deletes it and names the log with it, falling back to the inherited id. The hook does not use `updatedInput`/`permissionDecision`, so the auto-mode classifier still judges every call (a first version with `allow` was rejected in review).
+- **Checks:** `python -m pytest -q tools` 30/30. Needs an agy server restart (`/mcp`) to load. **Not yet seen live after a `/clear`.**

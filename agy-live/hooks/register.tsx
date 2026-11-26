@@ -4,9 +4,9 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Phase, SideRun } from '../types'
 import { PAST_VERBS, VERBS } from './verbs'
 
-// Shows what Antigravity (agy) is doing while Claude delegates via delegar.ps1:
+// Shows what Antigravity (agy) is doing while Claude delegates via agy_mcp.py / agy_run.py:
 // a Claude-style status above the prompt during the run, and the full log in a pane on /agy.
-// Source: ~/.claude/tools/live/<session id>.log, rewritten by delegar.ps1 on every run of this session.
+// Source: ~/.claude/tools/live/<session id>.log, rewritten by agy_run.py on every run of this session.
 const PANE = 'agy-live'
 const TITLE = 'agy (Antigravity)'
 const lines = atom({ plugin: 'agy-live', key: 'lines' } as const, [], { shape: 'lines-1' })
@@ -59,7 +59,7 @@ let rearm: { cancel: () => void } | undefined
 let runHeader: string | undefined   // header of the run the band is showing, once it has appeared
 let stalledEased = 0
 let thinkingEased = 0
-// Header line of the log before this run: until delegar.ps1 rewrites the file, it still holds the last run.
+// Header line of the log before this run: until agy_run.py rewrites the file, it still holds the last run.
 let previousHeader: string | undefined
 
 function thisRun(all: string[]): string[] {
@@ -73,6 +73,11 @@ export function headerTime(header: string | undefined): number | null {
   if (!m) return null
   const [y, mo, d, h, mi, s] = m.slice(1).map(Number) as [number, number, number, number, number, number]
   return new Date(y, mo - 1, d, h, mi, s).getTime()
+}
+
+// Whether a run's footer indicates success. Repo changes during a run are informational only (since 2026-11-26).
+export function footerOk(footer: string): boolean {
+  return footer.includes('SUCCESS')
 }
 
 // Claude's effort suffix on the thinking label (" with high effort"), from the header's "model/effort" field:
@@ -99,7 +104,7 @@ async function load($: EngineInterface): Promise<string> {
 }
 
 async function watch($: EngineInterface, tag: string | null = null, handover = false): Promise<void> {
-  // A later command that only mentions delegar.ps1 (a grep, a cat) must not reset a band that is already running.
+  // A later command that only mentions agy_run.py (a grep, a cat) must not reset a band that is already running.
   if ((await read($, phase)) === 'running') return
   bandTag = tag
   // the band's run no longer needs its side row (the side poll would take up to a second to drop it)
@@ -270,7 +275,7 @@ async function stop($: EngineInterface, to: Phase): Promise<void> {
     if (next !== bandTag) await startSide($)   // the side poll may have stopped; the run that just ended may chain another
     return watch($, next, true)
   }
-  // Several delegar.ps1 runs chained in one command: nothing calls watch() for the second, so for a minute
+  // Several agy_run.py runs chained in one command: nothing calls watch() for the second, so for a minute
   // after a run ends look for a new header with no footer in the same log, and follow it.
   const finished = (await read($, lines))[0]
   const since = await $.clock.now()
@@ -292,7 +297,7 @@ async function peek($: EngineInterface): Promise<string> {
 }
 
 // After a foreground run returns: no new log (blocked, crashed, or the command only mentioned
-// delegar.ps1) -> idle; a finished log -> done.
+// agy_run.py) -> idle; a finished log -> done.
 async function settle($: EngineInterface): Promise<void> {
   if ((await read($, phase)) !== 'running') return
   const text = (await load($)).replace(/^﻿/, '')
@@ -303,22 +308,24 @@ async function settle($: EngineInterface): Promise<void> {
 // The main band follows untagged runs, and a tagged run too when it is the only one in progress (2026-11-09: a lone
 // -Tag run showed no big band). Other tagged runs write <session id>-<tag>.log and get a side line.
 function isDelegar(cmd: unknown): boolean {
-  return typeof cmd === 'string' && cmd.includes('delegar.ps1')
+  return typeof cmd === 'string' && (cmd.includes('agy_run.py') || cmd.includes('cierre-delegar.ps1'))
 }
 
-function tagOf(cmd: unknown): string | null {
-  const m = typeof cmd === 'string' && cmd.includes('delegar.ps1') ? /\s-Tag\s+["']?([\w.-]+)/i.exec(cmd) : null
-  return m?.[1] ?? null
+export function tagOf(cmd: unknown): string | null {
+  if (typeof cmd !== 'string') return null
+  if (cmd.includes('agy_run.py')) return /\s--tag(?:\s+|=)["']?([\w.-]+)/i.exec(cmd)?.[1] ?? null
+  if (cmd.includes('cierre-delegar.ps1')) return /\s-Tag\s+["']?([\w.-]+)/i.exec(cmd)?.[1] ?? null
+  return null
 }
 
-// An actual delegar.ps1 launch (the script followed by its parameters), not a grep or diff that names the file.
+// An actual agy_run.py (or legacy cierre-delegar.ps1) launch (the script followed by its parameters), not a grep or diff that names the file.
 export function isLaunch(cmd: unknown): boolean {
-  return typeof cmd === 'string' && /delegar\.ps1['"]?\s+-/i.test(cmd)
+  return typeof cmd === 'string' && (/agy_run\.py['"]?\s+--/i.test(cmd) || /cierre-delegar\.ps1['"]?\s+-/i.test(cmd))
 }
 
 // One band handler for every way a run starts: untagged -> main band; tagged -> main band if nothing else is running,
 // else side line. Since 2026-11-25 Claude starts runs through the MCP tool mcp__agy__delegate (tools/agy_mcp.py), whose
-// call Claude Code moves to a native background task after two minutes; a shell launch of delegar.ps1 still works.
+// call Claude Code moves to a native background task after two minutes; a shell launch of agy_run.py still works.
 async function onRun($: EngineInterface, tag: string | null, e: unknown, next: (e: any) => Promise<any>) {
   if (tag !== null && ((await read($, phase)) === 'running' || (await read($, side)).length > 0)) {
     await startSide($)
@@ -559,7 +566,7 @@ export const register: Register = on => {
 
     if (now === 'done') {
       const footer = all.find(l => l.startsWith('-----')) ?? ''
-      const ok = footer.includes('SUCCESS') && footer.includes('git changed False')
+      const ok = footerOk(footer)
       // Like Claude's dim "✻ Crunched for 1m 12s" line (past verb from its list); red only when something needs a look.
       return withSide(ok ? (
         <Box marginTop={1}>

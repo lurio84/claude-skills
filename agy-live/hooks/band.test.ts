@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { candidateOf, chooseBandRun } from './register'
+import { candidateOf, chooseBandRun, footerOk } from './register'
 
 const run = (tag: string | null, start: number, running = true) => ({ tag, start, running })
 
@@ -56,4 +56,11 @@ test('the start is the header time, else the file mtime', async () => {
 test('ten quiet minutes mean the run is dead', async () => {
   expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 10 * 60_000, NOW)?.running).toBe(true)
   expect(candidateOf(`${SID}-x.log`, SID, open, NOW - 10 * 60_000 - 1, NOW)?.running).toBe(false)
+})
+
+test('a SUCCESS footer is OK regardless of git changed', async () => {
+  expect(footerOk('----- SUCCESS | git changed True')).toBe(true)
+  expect(footerOk('----- SUCCESS | git changed False')).toBe(true)
+  expect(footerOk('----- FAILED | git changed False')).toBe(false)
+  expect(footerOk('')).toBe(false)
 })

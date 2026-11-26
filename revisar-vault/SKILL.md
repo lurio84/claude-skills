@@ -1,6 +1,7 @@
 ---
 name: revisar-vault
 description: 'Periodic review of the Obsidian vault at C:\Users\lucas\SecondBrain and of Claude''s memory. Biased toward closing open threads, processing Inbox, checking active-project state and auditing memory for stale or unsourced claims — not a generalist audit. Output = living note Yo/Revision-Vault.md (never a new dated note). Use when the user says "revisar vault", "revisión del vault", "qué tengo abierto", "audita la memoria" or invokes /revisar-vault.'
+disable-model-invocation: true
 ---
 
 # Revisar Vault
@@ -58,7 +59,7 @@ Output: table `project | last note | age | flag`.
 
 ### Phase 3 — Memory audit (error propagation)
 
-0. **Contradiction scan** (audit B03, 2026-11-04). `/doctor prompt-audit` is a built-in command, so Claude can't run it: ask Lucas to run it twice, once plain and once as `/doctor prompt-audit ~/.claude/projects/C--Users-lucas-SecondBrain/memory`. Auto memory is outside its default scope, which is CLAUDE.md files plus `.claude/` rules and skills (docs memory.md, checked 2026-11-04). Feed the contradictions it finds into step 2. It looks for conflicting instructions; it doesn't check state against repos, which steps 1–2 still do.
+0. **Setup & skill checkup.** `/doctor` (setup checkup) and `/skill-doctor` (skill cost/usage) are built-in commands Claude can't run: ask Lucas to run them if relevant, and feed any setup or skill issues they surface into step 2. Neither checks state against repos, which steps 1–2 still do.
 1. **Reference + index integrity** (script, no LLM): `python -I ~/.claude/tools/refcheck.py`. It scans the CLAUDE.md files, `~/.claude/README.md`, all memories, skills and hooks for broken wikilinks, memory names, paths and `/commands`, plus index pointers to missing files, unindexed memories and double-indexed ones. Fix real breaks (some hits are false positives: example paths, intentional historical mentions). Also grep the CLAUDE.md files for hardcoded counts. Reason it exists: setup audits (2026-09-07, 09-24, 10-28) kept finding the same docs-vs-files drift; this makes the check mechanical.
 2. **Content check**, triaged (audit F10, 2026-11-03): read only the `project_*`/`feedback_*` memories modified since the last review in `Yo/Revision-Vault.md`, plus those whose index line carries a date >3 months old or that `refcheck.py`/`health.py` flagged. Skip the rest and say how many were skipped:
    - **Still true?** Project state vs vault notes / repo / `git log`; feedback vs CLAUDE.md and other memories (contradictions).

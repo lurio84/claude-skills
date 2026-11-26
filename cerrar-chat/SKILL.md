@@ -1,6 +1,7 @@
 ---
 name: cerrar-chat
 description: Session closing ritual — persist to vault and memory, check wikilinks, sync the setup repos.
+disable-model-invocation: true
 ---
 
 # Cerrar Chat
@@ -22,10 +23,8 @@ This skill is the single source for the closing ritual (`CLAUDE.md` § "Session 
 Does anything deserve to outlive the chat? — decisions taken, commit hashes, findings, a project changing state. Save it directly in the matching note; don't ask unless where it goes is genuinely ambiguous.
 
 Vault rules (`C:\Users\lucas\SecondBrain`):
-- Before creating a new note, check with Glob/Grep that no similar one exists.
-- Wikilinks `[[note]]` by name only (no path), YAML frontmatter, English (exceptions per `CLAUDE.md` § "Language & style").
+- Follow the vault/memory persistence and language rules in `CLAUDE.md` (§ "Vault", § "Language & style") and `[[feedback_memoria_vault]]`.
 - Don't save what the repo or the vault already records by itself.
-- Every factual claim you save (here or in memory, step 3) carries source + verification date; anything unverified is marked as intuition or not saved ([[feedback_memoria_vault]]).
 - Did a snippet or recipe work against an external site (WhatsApp Web, SharePoint, EV…)? Save it as a file (e.g. in the relevant skill's `scripts/`) and link it from the note; don't leave it only as prose.
 
 ### 3. Update memory

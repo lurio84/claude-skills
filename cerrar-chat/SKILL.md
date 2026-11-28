@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Cerrar Chat
 
-Session closing ritual. Runs when Lucas types `/cerrar-chat` or explicitly asks Claude to run it (e.g. "advisor y /cerrar-chat", said out of habit: the advisor is off, so this just means the close). Never start it on your own from a vague "cerramos" in prose.
+Session closing ritual. Runs only when Lucas types `/cerrar-chat` (`disable-model-invocation` is on, kept by Lucas 2026-11-28). If he asks for the close in prose (e.g. "advisor y /cerrar-chat", said out of habit: the advisor is off), ask him to type the command.
 
 This skill is the single source for the closing ritual (`CLAUDE.md` § "Session closing" points here). The general vault/memory rules it applies live in `feedback_memoria_vault`.
 

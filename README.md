@@ -7,6 +7,7 @@ Personal skills for Claude Code: repeatable procedures Claude runs when I invoke
 | Skill | What it does |
 |---|---|
 | [`agy-live`](./agy-live/) | Claude Code mod (plugin folder, no SKILL.md): while Claude delegates to Antigravity CLI through `delegar`, a Claude-style status line above the prompt (verb, elapsed time, generated tokens, current tool/file) and an `/agy` pane with the full log of the last run. |
+| [`cerrar-agy`](./cerrar-agy/SKILL.md) | Closing ritual for an Antigravity (`agy`) session in the vault; agy-only (turned off in Claude Code via `skillOverrides`), linked into agy by `agy-install.ps1`. |
 | [`cerrar-chat`](./cerrar-chat/SKILL.md) | Session closing ritual: reviews what was done, saves what deserves it to the vault, updates memory, offers a continuation prompt if work was left mid-flight. |
 | [`delegar`](./delegar/SKILL.md) | Delegate almost any whole or partial task (read, `write` worktrees, `vault`) to Antigravity CLI (`agy`) to share load off Claude's quota. Needs private launcher/MCP scripts (`~/.claude/tools/agy_run.py`, `agy_mcp.py`) that are not in this repo. |
 | [`grill-me`](./grill-me/SKILL.md) | Intensive interview about a plan or design: one question at a time down the decision tree, each with a recommendation. |
@@ -15,7 +16,8 @@ Personal skills for Claude Code: repeatable procedures Claude runs when I invoke
 | [`task-progress`](./task-progress/) | Claude Code mod (plugin folder, no SKILL.md): a progress bar above the prompt for each background Bash/PowerShell task (reads `PROGRESS n/m`, tqdm or `NN%` from its output), a `/logs` pane with the live log, and a toast when it ends. |
 
 Not versioned here (local only):
-- Third-party skills I installed (`jlhomelab`, `game-feel`, `create-game-assets`, `find-skills`) stay out because `.gitignore` is an allowlist (only the skills listed there are published); reinstall them from their sources on a new machine.
+- Third-party skills (today only `jlhomelab`, listed in `~/.claude/skills-third-party.json`) stay out because `.gitignore` is an allowlist (only the skills listed there are published); reinstall them from their sources on a new machine.
+- Private skills (`poe2`, `tfg`) are directory junctions into my private vault; see `claude-config`'s README for the restore command.
 - `synced/` holds the claude.ai skills Claude Code syncs automatically. They are Anthropic's (all rights reserved), so `.gitignore` keeps them out.
 
 ## Using it on another machine
